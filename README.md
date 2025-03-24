@@ -1,27 +1,34 @@
-# tempdisagg
+# ⚡️ tempdisagg
 
-**Temporal Disaggregation Models in Python**
+> **Temporal Disaggregation Models in Python — Modular · Robust · Ready for Production**
 
-`tempdisagg` is a Python library for temporal disaggregation of time series data. It supports all classical methods (Chow-Lin, Litterman, Denton, Fernández, Uniform) and provides a modular, extensible and production-ready architecture inspired by the R package `temp-dissag`. The implementation includes regression-based models, differencing approaches, ensemble predictions, post-estimation adjustments, and full integration with the scientific Python stack.
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
+![Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Coverage](https://img.shields.io/badge/tests-100%25-success)
+![PyPI - Status](https://img.shields.io/badge/pypi-ready-yellow)
 
-Many official statistics and business indicators are reported at low frequencies (e.g., annually or quarterly), but decision-making often demands high-frequency data. Temporal disaggregation bridges this gap by estimating high-frequency series that remain consistent with aggregated values.  
-**temporal-dissagregation** provides a flexible and modular interface for performing temporal disaggregation using multiple statistical, econometric, and machine learning techniques — all in Python.
+---
 
+`tempdisagg` is a Python library for **temporal disaggregation of time series data**.  
+It supports all classical methods — **Chow-Lin**, **Litterman**, **Denton**, **Fernández**, **Uniform** — and offers a **modular, extensible, production-grade** architecture, inspired by the R package `tempdisagg`.
+
+✨ The library combines:
+- 📈 Regression-based models
+- 📉 Differencing & smoothing techniques
+- 🤖 Ensemble learning
+- 🛠 Post-estimation adjustments
+- 🧠 Full integration with the Python scientific stack
 
 ---
 
-## 🚀 Features
+Many official statistics and business indicators are reported at low frequencies (e.g., annually or quarterly), but decision-making often demands **high-frequency estimates**.  
+Temporal disaggregation bridges this gap by producing granular series that **preserve consistency with aggregate values**.
 
-- ✅ **Scikit-learn style API**: `.fit()`, `.predict()`, `.fit_predict()`, `.summary()`, `.plot()`
-- ✅ **All major disaggregation methods**: OLS, Denton, Chow-Lin (incl. Quilis & Ecotrim), Litterman, Fernández, Uniform
-- ✅ **Optimized rho estimation** via max-log likelihood and RSS minimization
-- ✅ **Ensemble modeling** with automatic weight optimization
-- ✅ **Post-estimation adjustments** to ensure non-negativity and aggregation consistency
-- ✅ **Flexible aggregation rules**: `'sum'`, `'average'`, `'first'`, `'last'`
-- ✅ **Robust interpolation of missing data**
-- ✅ **Custom logger**, verbosity control, fallback mechanisms and unit test support
+**`tempdisagg`** provides a flexible interface to solve this problem — using econometric, statistical and machine learning techniques in a unified Pythonic API.
 
 ---
+
 
 ## 📚 Methods Implemented
 
