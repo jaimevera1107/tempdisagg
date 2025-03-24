@@ -1,8 +1,8 @@
-# temporal-dissagregation
+# tempdisagg
 
 **Temporal Disaggregation Models in Python**
 
-`temporal-dissagregation` is a Python library for temporal disaggregation of time series data. It supports all classical methods (Chow-Lin, Litterman, Denton, Fernández, Uniform) and provides a modular, extensible and production-ready architecture inspired by the R package `temp-dissag`. The implementation includes regression-based models, differencing approaches, ensemble predictions, post-estimation adjustments, and full integration with the scientific Python stack.
+`tempdisagg` is a Python library for temporal disaggregation of time series data. It supports all classical methods (Chow-Lin, Litterman, Denton, Fernández, Uniform) and provides a modular, extensible and production-ready architecture inspired by the R package `temp-dissag`. The implementation includes regression-based models, differencing approaches, ensemble predictions, post-estimation adjustments, and full integration with the scientific Python stack.
 
 Many official statistics and business indicators are reported at low frequencies (e.g., annually or quarterly), but decision-making often demands high-frequency data. Temporal disaggregation bridges this gap by estimating high-frequency series that remain consistent with aggregated values.  
 **temporal-dissagregation** provides a flexible and modular interface for performing temporal disaggregation using multiple statistical, econometric, and machine learning techniques — all in Python.
