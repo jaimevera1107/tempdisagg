@@ -6,7 +6,7 @@ from tempdisagg.postprocessing.ensemble_prediction import EnsemblePrediction
 class TempDisaggEnsemble:
     def ensemble(self, df, methods=None):
         if self.y_l is None or self.X is None or self.C is None:
-            self.y_l, self.X, self.C, self.padding_info = self.base.prepare(df)
+            self.y_l, self.X, self.C, _, self.padding_info = self.base.prepare(df)
             self.n_pad_before = self.padding_info.get("n_pad_before", 0)
             self.n_pad_after = self.padding_info.get("n_pad_after", 0)
             self.df_ = self.base.df_full if hasattr(self.base, "df_full") else df

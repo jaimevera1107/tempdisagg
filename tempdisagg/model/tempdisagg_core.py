@@ -75,11 +75,11 @@ class TempDisaggModelCore:
         }
 
     def fit(self, df):
-        self.y_l, self.X, self.C, self.padding_info = self.base.prepare(df)
+        self.y_l, self.X, self.C, completed_df, self.padding_info = self.base.prepare(df)
+
         self.n_pad_before = self.padding_info.get("n_pad_before", 0)
         self.n_pad_after = self.padding_info.get("n_pad_after", 0)
-        self.df_ = self.base.df_full if hasattr(self.base, "df_full") else df
-
+        self.df_ = completed_df
 
         if self.method not in self.all_methods:
             raise ValueError(f"Unknown method '{self.method}'.")
@@ -107,6 +107,9 @@ class TempDisaggModelCore:
         self.residuals = result.get("residuals")
         self.Q = result.get("Q")
         self.vcov = result.get("vcov")
+        
+        if self.y_hat.shape[0] != self.df_.shape[0]:
+            raise ValueError("Prediction (y_hat) and completed DataFrame (df_) have inconsistent lengths.")
 
         self.results_ = {
             self.method: {
@@ -117,7 +120,9 @@ class TempDisaggModelCore:
                 "weight": 1.0
             }
         }
+
         return self
+
 
     def predict(self, full=False):
         if self.y_hat is None:

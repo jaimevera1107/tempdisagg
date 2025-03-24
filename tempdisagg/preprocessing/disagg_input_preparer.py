@@ -46,6 +46,9 @@ class DisaggInputPreparer:
         self.X_col = X_col
         self.verbose = verbose
         self.interpolation_method = interpolation_method
+        self.df_full = None
+        self.padding_info = {}
+
 
         # Create logger with verbosity control
         self.logger = VerboseLogger(f"{__name__}.{id(self)}", verbose=self.verbose).get_logger()
@@ -93,8 +96,9 @@ class DisaggInputPreparer:
             verbose=self.verbose
         )
         completed_df, padding_info = completer.complete_series()
+        self.df_full = completed_df
+        self.padding_info = padding_info
 
-        # Step 2: Build the conversion matrix
         builder = ConversionMatrixBuilder(
             conversion=self.conversion,
             grain_col=self.grain_col,
@@ -103,40 +107,28 @@ class DisaggInputPreparer:
         )
         C = builder.build(completed_df)
 
-        # Step 3: Extract low-frequency target variable y_l
         try:
             y_l = completed_df.groupby(self.index_col)[self.y_col].first().values.reshape(-1, 1)
         except Exception as e:
-            raise ValueError(f"Error extracting 'y_l' from column '{self.y_col}': {str(e)}")
+            raise ValueError(f"Error extracting 'y_l': {e}")
 
-        # Step 4: Extract high-frequency predictor variable X
         try:
             X = completed_df[self.X_col].values.reshape(-1, 1)
         except Exception as e:
-            raise ValueError(f"Error extracting 'X' from column '{self.X_col}': {str(e)}")
+            raise ValueError(f"Error extracting 'X': {e}")
 
-        # Step 5: Validate alignment of dimensions
         if C.shape[0] != y_l.shape[0]:
-            raise ValueError(
-                f"Row mismatch: C has {C.shape[0]} rows but y_l has {y_l.shape[0]}."
-            )
+            raise ValueError(f"Row mismatch: C has {C.shape[0]} rows but y_l has {y_l.shape[0]}.")
         if C.shape[1] != X.shape[0]:
-            raise ValueError(
-                f"Column mismatch: C has {C.shape[1]} columns but X has {X.shape[0]} rows."
-            )
+            raise ValueError(f"Column mismatch: C has {C.shape[1]} columns but X has {X.shape[0]} rows.")
 
-        # Step 6: Warn if too few observations
         if y_l.shape[0] < 3:
-            warnings.warn(
-                f"Only {y_l.shape[0]} observations in 'y_l'. Model output may be unstable.",
-                UserWarning
-            )
+            warnings.warn(f"Only {y_l.shape[0]} observations in 'y_l'.", UserWarning)
 
-        # Step 7: Log result shapes
         if self.verbose:
             self.logger.info("Disaggregation inputs prepared successfully.")
             self.logger.info(f"  → y_l shape: {y_l.shape}")
             self.logger.info(f"  → X shape: {X.shape}")
             self.logger.info(f"  → C shape: {C.shape}")
 
-        return y_l, X, C, padding_info
+        return y_l, X, C, completed_df, padding_info
