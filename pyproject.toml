@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tempdisagg"
-version = "0.1.1"
+version = "0.1.2"
 description = "Temporal disaggregation models in Python"
 readme = "README.md"
 authors = [
@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/tu_usuario/tempdisagg"
+Homepage = "https://github.com/jaimevera1107/tempdisagg"
 
 [tool.setuptools.packages.find]
 where = ["."]
