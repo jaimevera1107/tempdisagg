@@ -79,7 +79,6 @@ junit-*.xml
 
 # Documentation
 docs/_build/
-*.pdf
 *.html
 
 # Notebook Outputs
