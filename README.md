@@ -86,7 +86,8 @@ The ensemble module allows combining multiple disaggregation methods into a sing
 3. **Optimizing weights** across models using non-negative least squares to minimize the error of the aggregated prediction (subject to weights summing to 1).
 4. **Generating a final ensemble prediction**:  
    $$\hat{y}_{ensemble} = \sum_{i} w_i \cdot \hat{y}_i$$
-   where $\hat{y}_i$ is the prediction of the \(i\)-th model and \( w_i \) is its optimal weight.
+
+   where $\hat{y}_i$ is the prediction of the $i$ -th model and $ w_i $ is its optimal weight.
 
 Additional features:
 - Bootstrap-based confidence intervals for the ensemble.
@@ -114,11 +115,11 @@ Temporal disaggregation methods may produce negative high-frequency values when:
 To address this, `tempdisagg` applies a post-estimation adjustment that:
 
 1. **Detects negative predictions** in `y_hat`.
-2. **Groups values** by low-frequency periods using the conversion matrix \( C \).
+2. **Groups values** by low-frequency periods using the conversion matrix $ C $.
 3. **Redistributes residuals** within each group to ensure all values are non-negative and consistent:
    - Preserves the original sum (`C @ y_hat_adjusted = y_l`).
    - Applies proportional or uniform redistribution to correct negatives.
-   - Ensures $\hat{y}_{adjusted} \geq 0 $ without breaking constraints.
+   - Ensures $\hat{y}_{adjusted} \geq 0$ without breaking constraints.
 
 ### ✅ Negatives Adjustment
 ```python
