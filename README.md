@@ -10,7 +10,8 @@
 
 ---
 
-`tempdisagg` is a Python library for **temporal disaggregation of time series data**.  
+`tempdisagg` is a Python library for **temporal disaggregation of time series data**.
+
 It supports all classical methods — **Chow-Lin**, **Litterman**, **Denton**, **Fernández**, **Uniform** — and offers a **modular, extensible, production-grade** architecture, inspired by the R package `tempdisagg`.
 
 ✨ The library combines:
@@ -22,8 +23,7 @@ It supports all classical methods — **Chow-Lin**, **Litterman**, **Denton**, *
 
 ---
 
-Many official statistics and business indicators are reported at low frequencies (e.g., annually or quarterly), but decision-making often demands **high-frequency estimates**.  
-Temporal disaggregation bridges this gap by producing granular series that **preserve consistency with aggregate values**.
+Many official statistics and business indicators are reported at low frequencies (e.g., annually or quarterly), but decision-making often demands **high-frequency estimates**. Temporal disaggregation bridges this gap by producing granular series that **preserve consistency with aggregate values**.
 
 **`tempdisagg`** provides a flexible interface to solve this problem — using econometric, statistical and machine learning techniques in a unified Pythonic API.
 
@@ -79,19 +79,16 @@ model.plot(df)
 
 ### 🤖 How does the Ensemble Prediction work?
 
-The ensemble module allows combining multiple disaggregation methods into a single high-frequency estimate. It works by:
+The ensemble module combines multiple disaggregation methods into a single high-frequency estimate. It works by:
+- Fitting multiple models individually on the same input dataset (e.g., Chow-Lin, Denton, Fernández).
+- Calculating the prediction errors (e.g., RMSE or MAE) for each model.
+- Optimizing weights across models to minimize the combined prediction error (weights sum up to 1).
+- Producing a final ensemble prediction as a weighted combination of the individual model predictions.
 
-1. **Fitting multiple models** individually on the same input dataset using methods like `chow-lin`, `denton`, `fernandez`, etc.
-2. **Computing the aggregated prediction error** (e.g., RMSE or MAE) of each model with respect to the low-frequency constraint.
-3. **Optimizing weights** across models using non-negative least squares to minimize the error of the aggregated prediction (subject to weights summing to 1).
-4. **Generating a final ensemble prediction**:  
-   $$\hat{y}_{ensemble} = \sum_{i} w_i \cdot \hat{y}_i$$
-
-   where $\hat{y}_i$ is the prediction of the $i$ -th model and $ w_i $ is its optimal weight.
 
 Additional features:
 - Bootstrap-based confidence intervals for the ensemble.
-- Aggregated statistics such as average coefficients and combined R².
+- Aggregated statistics such as average coefficients and combined r-squared.
 - Visual comparison of all component models via `.plot(df, show_individuals=True)`.
 
 ### 🤝 Ensemble Modeling
@@ -107,19 +104,20 @@ model.plot(df, use_adjusted=True)
 
 ### 🚫 How does the Negative Value Adjustment work?
 
-Temporal disaggregation methods may produce negative high-frequency values when:
-- The low-frequency total is small.
-- The method uses strong differencing or extrapolation.
-- Indicator series are noisy or weakly correlated.
+Temporal disaggregation methods can sometimes produce negative high-frequency estimates, especially when:
 
-To address this, `tempdisagg` applies a post-estimation adjustment that:
+- The total of the low-frequency data is small.
+- The method involves strong differencing or extrapolation.
+- The indicator variables are noisy or weakly correlated.
 
-1. **Detects negative predictions** in `y_hat`.
-2. **Groups values** by low-frequency periods using the conversion matrix $ C $.
-3. **Redistributes residuals** within each group to ensure all values are non-negative and consistent:
-   - Preserves the original sum (`C @ y_hat_adjusted = y_l`).
-   - Applies proportional or uniform redistribution to correct negatives.
-   - Ensures $\hat{y}_{adjusted} \geq 0$ without breaking constraints.
+To handle this issue, tempdisagg performs a post-estimation adjustment by:
+
+- Identifying negative predictions in the estimated high-frequency series.
+- Grouping values according to their low-frequency periods using the conversion logic.
+- Redistributing residuals within each low-frequency group to ensure:
+      - The total sum remains unchanged, matching the original low-frequency data.
+      - Negative values are corrected through proportional or uniform adjustments.
+      - All resulting high-frequency values become non-negative without violating consistency constraints.
 
 ### ✅ Negatives Adjustment
 ```python
