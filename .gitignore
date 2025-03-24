@@ -1,0 +1,117 @@
+# ===========================================
+# Python cache, build & distribution
+# ===========================================
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+*.eggs/
+*.manifest
+*.spec
+
+# Distribution / Packaging
+build/
+dist/
+*.whl
+*.log
+*.tmp
+*.bak
+
+# Virtual environments
+venv/
+.env/
+.venv/
+ENV/
+env/
+.Python
+pip-log.txt
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Setuptools
+*.egg-info/
+.installed.cfg
+
+# VSCode
+.vscode/
+
+# PyCharm
+.idea/
+
+# Mac & Linux system
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+.Spotlight-V100
+.Trashes
+
+# Byte-compiled files
+*.py[cod]
+*$py.class
+
+# Unit test / coverage / pytest
+.coverage
+coverage.xml
+.cache/
+.tox/
+.pytest_cache/
+nosetests.xml
+test_output/
+junit-*.xml
+
+# Profiling
+*.lprof
+*.prof
+*.dat
+*.pstat
+
+# MyPy & Static Analysis
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+
+# Documentation
+docs/_build/
+*.pdf
+*.html
+
+# Notebook Outputs
+*.out
+*.svg
+*.png
+*.gif
+
+# Editable install metadata
+*.egg-link
+
+# Lock files
+poetry.lock
+Pipfile.lock
+
+# Logs and dumps
+*.log
+*.out
+*.err
+
+# Local notebooks, scratch
+notebooks/
+scratch/
+
+# Temp files
+*.swp
+*~
+*.tmp
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Jupyter metadata
+.ipynb_checkpoints/
