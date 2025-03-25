@@ -4,18 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tempdisagg"
-version = "0.2.1"
+version = "0.2.2"
 description = "Temporal disaggregation models in Python"
 readme = "README.md"
 authors = [
     { name = "Jaime Vera-Jaramillo", email = "jaimevera1107@gmail.com" }
 ]
-license = { text = "MIT" }
+license = "MIT"
 keywords = ["temporal disaggregation", "time series", "econometrics", "interpolation"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Operating System :: OS Independent"
@@ -32,12 +31,11 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/jaimevera1107/tempdisagg"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["tempdisagg*"]
+[tool.setuptools]
+packages = ["tempdisagg"]
 
 [tool.setuptools.package-data]
 tempdisagg = ["py.typed"]
 
-[tool.setuptools]
-package-dir = { "" = "." }
+[tool.setuptools.exclude-package-data]
+"*" = ["notebooks*", "example*", "tests*"]

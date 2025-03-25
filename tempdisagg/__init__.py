@@ -29,6 +29,6 @@ __all__ = [
 
 
 # Versioning and metadata
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __author__ = "Jaime Vera-Jaramillo"
 __license__ = "MIT"
