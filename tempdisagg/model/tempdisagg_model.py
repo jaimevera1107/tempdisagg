@@ -286,4 +286,14 @@ class TempDisaggModel:
         None
         """
         return TempDisaggReporter.summary(self, metric=metric)
+    
+    def summary_compact(self):
+        """
+        Print compact summary of ensemble or individual methods.
+
+        OUTPUT
+        None
+        """
+        return TempDisaggReporter.summary_compact(self)
+
 

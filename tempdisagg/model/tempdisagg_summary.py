@@ -41,12 +41,19 @@ class TempDisaggReporter:
                         "Signif.": signif
                     })
 
-                    if self.y_l is not None and self.C is not None and self.y_hat is not None:
-                        y_agg = self.C @ self.y_hat
-                        score = self._compute_score(self.y_l.flatten(), y_agg.flatten(), metric)
-                        df["Score"] = [score] + [np.nan] * (df.shape[0] - 1)
+                    y_l = res.get("y_l")
+                    C = res.get("C")
+                    y_hat = res.get("y_hat", getattr(self, "y_hat", None))
 
-                    print(df.to_string(index=False, float_format="%.9f"))
+                    if y_l is not None and C is not None and y_hat is not None:
+                        try:
+                            y_agg = C @ y_hat
+                            score = self._compute_score(y_l.flatten(), y_agg.flatten(), metric)
+                            df["Score"] = [score] + [np.nan] * (df.shape[0] - 1)
+                        except Exception as e:
+                            print(f"Score computation failed: {e}")
+
+                    print(df.to_string(index=False, float_format="%.8f"))
 
                 except Exception as e:
                     print("Failed to compute summary statistics.")
