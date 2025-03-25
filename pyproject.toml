@@ -1,6 +1,10 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "tempdisagg"
-dynamic = ["version"]
+version = "0.2.1"
 description = "Temporal disaggregation models in Python"
 readme = "README.md"
 authors = [
@@ -16,6 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Operating System :: OS Independent"
 ]
+
 requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.21",
@@ -23,3 +28,16 @@ dependencies = [
     "scipy>=1.7",
     "matplotlib>=3.4"
 ]
+
+[project.urls]
+Homepage = "https://github.com/jaimevera1107/tempdisagg"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tempdisagg*"]
+
+[tool.setuptools.package-data]
+tempdisagg = ["py.typed"]
+
+[tool.setuptools]
+package-dir = { "" = "." }

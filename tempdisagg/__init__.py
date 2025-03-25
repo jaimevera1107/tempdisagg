@@ -4,12 +4,6 @@
 tempdisagg: Temporal disaggregation of low-frequency time series using various statistical methods.
 """
 
-# Versioning and metadata
-__version__ = "0.2.1"
-__author__ = "Jaime Vera-Jaramillo"
-__license__ = "MIT"
-
-
 # Public API
 from .model.tempdisagg_model import TempDisaggModel
 
@@ -32,3 +26,9 @@ __all__ = [
     "EnsemblePrediction",
     "TemporalAggregator",
 ]
+
+
+# Versioning and metadata
+__version__ = "0.2.1"
+__author__ = "Jaime Vera-Jaramillo"
+__license__ = "MIT"
