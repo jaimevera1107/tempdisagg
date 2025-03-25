@@ -20,7 +20,7 @@ def disagg_data():
 def test_summary_individual(disagg_data):
     model = TempDisaggModel(method="chow-lin-opt", conversion="average")
     model.fit(disagg_data)
-    model.summary(metric="mae")
+    print(model.summary(metric="mae"))
 
 def test_summary_ensemble(disagg_data):
     model = TempDisaggModel(method="ensemble", conversion="average")
