@@ -28,6 +28,10 @@ dependencies = [
     "matplotlib>=3.4"
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tempdisagg", "tempdisagg.*"]
+
 [project.urls]
 Homepage = "https://github.com/jaimevera1107/tempdisagg"
 
