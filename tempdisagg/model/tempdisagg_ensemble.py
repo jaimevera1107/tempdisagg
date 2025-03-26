@@ -89,7 +89,7 @@ class EnsemblePredictor:
         df : pandas.DataFrame
             Input DataFrame with target and indicators.
         methods : list or None
-            List of methods to include in the ensemble.
+            List of methods to include in the ensemble. If None, use all available.
 
         OUTPUT
         y_hat : np.ndarray
@@ -105,6 +105,15 @@ class EnsemblePredictor:
         # Save internal references
         self.df_full = df_full
         self.padding_info = padding_info
+
+        # Load default methods if none provided
+        if methods is None:
+            methods = [
+                "ols", "denton", "chow-lin", "litterman", "fernandez", "fast",
+                "chow-lin-opt", "litterman-opt", "chow-lin-ecotrim", "chow-lin-quilis",
+                "denton-opt", "denton-colette", "uniform"
+            ]
+            self.logger.info(f"No methods specified. Using all available: {methods}")
 
         # Initialize ensemble engine
         self.ensemble = EnsemblePrediction(
@@ -143,7 +152,7 @@ class EnsemblePredictor:
 
         self.logger.info("Ensemble fitting completed.")
         return y_hat, padding_info, df_full
-
+    
     def predict(self):
         """
         Return the ensemble prediction.

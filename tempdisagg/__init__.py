@@ -26,3 +26,5 @@ __all__ = [
     "EnsemblePrediction",
     "TemporalAggregator",
 ]
+
+__version__= "0.2.5"
