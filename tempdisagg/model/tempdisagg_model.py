@@ -170,7 +170,7 @@ class TempDisaggModel:
         self._adjusted = adjusted_df["y_hat"].to_numpy().reshape(-1, 1)
         return self._truncate(self._adjusted, full)
 
-    def plot(self, use_adjusted=False):
+    def plot(self, use_adjusted=False, **kwargs):
         """
         Plot disaggregated prediction.
 
@@ -187,7 +187,7 @@ class TempDisaggModel:
         if self.is_ensemble:
             return self.ensemble.plot(df=self._df)
 
-        return TempDisaggVisualizer.plot(self, use_adjusted=use_adjusted)
+        return TempDisaggVisualizer.plot(self, use_adjusted=use_adjusted, **kwargs)
 
     def summary(self):
         """
