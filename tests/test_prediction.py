@@ -74,3 +74,12 @@ def test_ensemble_adjust_truncated(disagg_data):
     adjusted = model.adjust_output(full=False)
     assert adjusted.shape[0] < model._df.shape[0]
     assert adjusted.shape[1] == 1
+
+def test_ensemble_adjust_truncated_no_methods(disagg_data):
+    model = TempDisaggModel(method="ensemble", conversion="average")
+    model.fit(disagg_data)
+    adjusted = model.adjust_output(full=False)
+    model.summary()
+    model.plot()
+    assert adjusted.shape[0] < model._df.shape[0]
+    assert adjusted.shape[1] == 1
