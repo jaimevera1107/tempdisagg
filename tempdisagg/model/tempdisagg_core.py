@@ -26,7 +26,10 @@ class TempDisaggModelCore:
         rho_min=-0.9,
         rho_max=0.99,
         fallback_method="fast",
-        verbose=False
+        verbose=False,
+        use_retropolarizer=False,
+        retro_method="linear_regression",
+        retro_aux_col=None
     ):
         """
         Initialize the core disaggregation model.
@@ -54,11 +57,16 @@ class TempDisaggModelCore:
             Fallback strategy if main method fails.
         verbose : bool
             Flag to activate logging messages.
+        use_retropolarizer : bool
+            Whether to use Retropolarizer instead of standard interpolation for y_col.
+        retro_method : str
+            Method used by Retropolarizer (e.g. 'linear_regression').
+        retro_aux_col : str or None
+            Auxiliary column to use as predictor for retropolarization. If None, uses X_col.
 
         OUTPUT
         None
         """
-        # Save parameters
         self.conversion = conversion
         self.grain_col = grain_col
         self.index_col = index_col
@@ -70,11 +78,12 @@ class TempDisaggModelCore:
         self.rho_max = rho_max
         self.fallback_method = fallback_method
         self.verbose = verbose
+        self.use_retropolarizer = use_retropolarizer
+        self.retro_method = retro_method
+        self.retro_aux_col = retro_aux_col
 
-        # Setup logger
         self.logger = VerboseLogger(f"{__name__}.{id(self)}", verbose=self.verbose).get_logger()
 
-        # Initialize output placeholders
         self.rho = None
         self.beta = None
         self.residuals = None
@@ -87,12 +96,10 @@ class TempDisaggModelCore:
         self.df_ = None
         self.results_ = {}
 
-        # Padding tracking
         self.n_pad_before = 0
         self.n_pad_after = 0
         self.padding_info = {}
 
-        # Initialize components
         self.base = DisaggInputPreparer(
             conversion=self.conversion,
             grain_col=self.grain_col,
@@ -100,7 +107,10 @@ class TempDisaggModelCore:
             y_col=self.y_col,
             X_col=self.X_col,
             verbose=self.verbose,
-            interpolation_method=self.interpolation_method
+            interpolation_method=self.interpolation_method,
+            use_retropolarizer=self.use_retropolarizer,
+            retro_method=self.retro_method,
+            retro_aux_col=self.retro_aux_col
         )
 
         self.models = ModelsHandler(
@@ -109,7 +119,6 @@ class TempDisaggModelCore:
             verbose=self.verbose
         )
 
-        # Define method map
         self.all_methods = {
             "ols": self.models.ols_estimation,
             "denton": self.models.denton_estimation,
@@ -127,36 +136,19 @@ class TempDisaggModelCore:
         }
 
     def fit(self, df):
-        """
-        Fit the model using the selected method (with fallback if needed).
-
-        INPUT
-        df : pandas.DataFrame
-            Input DataFrame with `y`, `X`, grain and index columns.
-
-        OUTPUT
-        self : TempDisaggModelCore
-            Fitted model object.
-        """
-        # Prepare matrices and complete data
         self.y_l, self.X, self.C, completed_df, self.padding_info = self.base.prepare(df)
 
-        # Extract padding info
         self.n_pad_before = self.padding_info.get("n_pad_before", 0)
         self.n_pad_after = self.padding_info.get("n_pad_after", 0)
         self.df_ = completed_df
 
-        # Validate method
         if self.method not in self.all_methods:
             raise ValueError(f"Unknown method '{self.method}'.")
 
-        # Log start of estimation
         self.logger.info(f"Fitting model using method '{self.method}'...")
 
-        # Attempt main method
         result = self.all_methods[self.method](self.y_l, self.X, self.C)
 
-        # If main method fails, use fallback
         if result is None or "y_hat" not in result:
             warnings.warn(
                 f"Estimation using method '{self.method}' failed. "
@@ -169,9 +161,8 @@ class TempDisaggModelCore:
             result = fallback_func(self.y_l, self.X, self.C)
             if result is None or "y_hat" not in result:
                 raise RuntimeError(f"Fallback estimation using '{self.fallback_method}' also failed.")
-            self.method = self.fallback_method  # Log fallback usage
+            self.method = self.fallback_method
 
-        # Store outputs
         self.y_hat = np.atleast_2d(result["y_hat"]).reshape(-1, 1)
         self.beta = result.get("beta")
         self.rho = result.get("rho")
@@ -179,11 +170,9 @@ class TempDisaggModelCore:
         self.Q = result.get("Q")
         self.vcov = result.get("vcov")
 
-        # Validate output dimensions
         if self.y_hat.shape[0] != self.df_.shape[0]:
             raise ValueError("Mismatch: y_hat and df_ have inconsistent lengths.")
 
-        # Store results in compact structure
         self.results_ = {
             self.method: {
                 "beta": self.beta,
@@ -194,27 +183,13 @@ class TempDisaggModelCore:
             }
         }
 
-        # Log successful fit
         self.logger.info("Model fitting completed successfully.")
         return self
 
     def predict(self, full=True):
-        """
-        Return predicted high-frequency series.
-
-        INPUT
-        full : bool
-            If True, return padded version; else return trimmed to original range.
-
-        OUTPUT
-        y_hat : np.ndarray
-            Adjusted predicted series.
-        """
-        # Ensure fitting occurred
         if self.y_hat is None:
             raise RuntimeError("Model must be fitted before calling `predict()`.")
 
-        # Slice according to padding
         if not full:
             if self.n_pad_after == 0:
                 return self.y_hat[self.n_pad_before:]
@@ -222,28 +197,10 @@ class TempDisaggModelCore:
         return self.y_hat
 
     def fit_predict(self, df):
-        """
-        Convenience method to fit and immediately predict.
-
-        INPUT
-        df : pandas.DataFrame
-            Input data.
-
-        OUTPUT
-        y_hat : np.ndarray
-            Predicted high-frequency series.
-        """
         self.fit(df)
         return self.predict()
 
     def get_params(self, deep=True):
-        """
-        Return model parameters.
-
-        OUTPUT
-        params : dict
-            Current configuration as dictionary.
-        """
         return {
             "conversion": self.conversion,
             "grain_col": self.grain_col,
@@ -255,34 +212,19 @@ class TempDisaggModelCore:
             "rho_min": self.rho_min,
             "rho_max": self.rho_max,
             "fallback_method": self.fallback_method,
-            "verbose": self.verbose
+            "verbose": self.verbose,
+            "use_retropolarizer": self.use_retropolarizer,
+            "retro_method": self.retro_method,
+            "retro_aux_col": self.retro_aux_col
         }
 
     def set_params(self, **params):
-        """
-        Update model parameters.
-
-        INPUT
-        params : dict
-            Key-value arguments for attributes to update.
-
-        OUTPUT
-        self : TempDisaggModelCore
-            Model with updated configuration.
-        """
         for key, value in params.items():
             if hasattr(self, key):
                 setattr(self, key, value)
         return self
 
     def to_dict(self):
-        """
-        Export fitted model summary.
-
-        OUTPUT
-        summary : dict
-            Contains method, rho, beta, score, and prediction.
-        """
         return {
             "method": self.method,
             "rho": self.rho,

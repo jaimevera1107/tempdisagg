@@ -25,7 +25,10 @@ class EnsemblePredictor:
         rho_min=-0.9,
         rho_max=0.99,
         fallback_method="fast",
-        verbose=False
+        verbose=False,
+        use_retropolarizer=False,
+        retro_method="linear_regression",
+        retro_aux_col=None
     ):
         """
         Initialize the ensemble predictor.
@@ -51,18 +54,21 @@ class EnsemblePredictor:
             Method to use if one model fails.
         verbose : bool
             Whether to enable verbose logging.
+        use_retropolarizer : bool
+            Whether to use Retropolarizer instead of standard interpolation for y_col.
+        retro_method : str
+            Method used by Retropolarizer (e.g. 'linear_regression').
+        retro_aux_col : str or None
+            Auxiliary column to use as predictor for retropolarization. If None, uses X_col.
 
         OUTPUT
         None
         """
-        # Store configuration
         self.conversion = conversion
         self.verbose = verbose
 
-        # Initialize logger
         self.logger = VerboseLogger(f"{__name__}.{id(self)}", verbose=self.verbose).get_logger()
 
-        # Prepare input manager
         self.base = DisaggInputPreparer(
             conversion=conversion,
             grain_col=grain_col,
@@ -70,10 +76,12 @@ class EnsemblePredictor:
             y_col=y_col,
             X_col=X_col,
             interpolation_method=interpolation_method,
-            verbose=verbose
+            verbose=verbose,
+            use_retropolarizer=use_retropolarizer,
+            retro_method=retro_method,
+            retro_aux_col=retro_aux_col
         )
 
-        # Placeholders
         self.ensemble = None
         self.df_full = None
         self.padding_info = {}
@@ -82,31 +90,11 @@ class EnsemblePredictor:
         self.weights = None
 
     def fit(self, df, methods=None):
-        """
-        Fit an ensemble of disaggregation models.
-
-        INPUT
-        df : pandas.DataFrame
-            Input DataFrame with target and indicators.
-        methods : list or None
-            List of methods to include in the ensemble. If None, use all available.
-
-        OUTPUT
-        y_hat : np.ndarray
-            Predicted high-frequency series.
-        padding_info : dict
-            Information on rows padded before and after.
-        df_full : pandas.DataFrame
-            Completed DataFrame used for fitting.
-        """
-        # Prepare matrices
         y_l, X, C, df_full, padding_info = self.base.prepare(df)
 
-        # Save internal references
         self.df_full = df_full
         self.padding_info = padding_info
 
-        # Load default methods if none provided
         if methods is None:
             methods = [
                 "ols", "denton", "chow-lin", "litterman", "fernandez", "fast",
@@ -115,7 +103,6 @@ class EnsemblePredictor:
             ]
             self.logger.info(f"No methods specified. Using all available: {methods}")
 
-        # Initialize ensemble engine
         self.ensemble = EnsemblePrediction(
             model_class=BaseDisaggModel,
             conversion=self.conversion,
@@ -123,11 +110,9 @@ class EnsemblePredictor:
             verbose=self.verbose
         )
 
-        # Run all models and generate prediction
         self.logger.info("Fitting ensemble model...")
         y_hat = self.ensemble.run(df_full, y_l, C).reshape(-1, 1)
 
-        # Save results per method
         self.results_ = {
             name: {
                 "beta": m.beta,
@@ -141,48 +126,27 @@ class EnsemblePredictor:
             for i, (name, m) in enumerate(self.ensemble.models.items())
         }
 
-        # Save predictions per model
         self.predictions = {
             name: m.y_hat.flatten()
             for name, m in self.ensemble.models.items()
         }
 
-        # Save ensemble weights
         self.weights = self.ensemble.weights
 
         self.logger.info("Ensemble fitting completed.")
         return y_hat, padding_info, df_full
-    
-    def predict(self):
-        """
-        Return the ensemble prediction.
 
-        OUTPUT
-        y_hat : np.ndarray
-            Final ensemble prediction as array.
-        """
+    def predict(self):
         if self.ensemble is None:
             raise RuntimeError("Call `.fit()` before `.predict()`.")
 
         return self.ensemble.ensemble_predict().reshape(-1, 1)
 
     def plot(self, df=None):
-        """
-        Plot ensemble prediction and individual models.
-
-        INPUT
-        df : pandas.DataFrame or None
-            Optional DataFrame for plotting. If None, use internal `df_full`.
-
-        OUTPUT
-        None (displays a plot)
-        """
-        # Validate prediction availability
         if self.weights is None or not self.predictions:
             warnings.warn("Run `.fit()` before calling `.plot()`.")
             return
 
-        # Use internal DataFrame if not provided
         if df is None:
             if self.df_full is None:
                 raise ValueError("No DataFrame available. Pass `df` or call `.fit()` first.")
@@ -190,29 +154,22 @@ class EnsemblePredictor:
         else:
             df_plot = df.copy()
 
-        # Get ensemble prediction
         y_ens = self.predict().flatten()
 
-        # Validate alignment
         if len(df_plot) != len(y_ens):
             raise ValueError("Length mismatch between prediction and DataFrame.")
 
-        # Assign predictions to DataFrame
         df_plot["y_hat_ensemble"] = y_ens
 
-        # Plot observed series if available
         plt.figure(figsize=(12, 5))
         if "y" in df_plot.columns:
             plt.plot(df_plot.index, df_plot["y"], label="Observed y", linestyle="--", marker="o")
 
-        # Plot individual model predictions
         for method, y_pred in self.predictions.items():
             plt.plot(df_plot.index, y_pred, label=f"{method}", alpha=0.3)
 
-        # Plot ensemble line
         plt.plot(df_plot.index, df_plot["y_hat_ensemble"], label="Ensemble Prediction", linewidth=2)
 
-        # Final touches
         plt.title("Temporal Disaggregation - Ensemble vs Individual Models")
         plt.xlabel("Time")
         plt.ylabel("Value")
@@ -222,13 +179,6 @@ class EnsemblePredictor:
         plt.show()
 
     def summary(self):
-        """
-        Return summary dictionary of weights and parameters per method.
-
-        OUTPUT
-        summary : dict
-            Mapping of method to metadata (weights, rho, beta).
-        """
         if not self.results_:
             raise RuntimeError("Call `.fit()` before `.summary()`.")
 
@@ -242,12 +192,6 @@ class EnsemblePredictor:
         }
 
     def summary_compact(self):
-        """
-        Print compact summary table of model weights and rhos.
-
-        OUTPUT
-        None (prints table)
-        """
         summary = self.summary()
         print("Ensemble Summary:\n")
         print(f"{'Method':<25} {'Weight':<10} {'Rho':<10}")

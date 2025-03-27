@@ -1,30 +1,37 @@
-# tempdisagg/__init__.py
-
 """
 tempdisagg: Temporal disaggregation of low-frequency time series using various statistical methods.
 """
 
 # Public API
 from .model.tempdisagg_model import TempDisaggModel
+from .utils.retropolarizer import Retropolarizer
+from .core.temporal_aggregator import TemporalAggregator
 
 # Define what gets imported with `from tempdisagg import *`
 __all__ = [
-    "TempDisaggModel",
-    "ModelFitter",
-    "EnsemblePredictor",
-    "TempDisaggVisualizer",
-    "TempDisaggReporter",
-    "TempDisaggAdjuster",
-    "DisaggInputPreparer",
-    "InputPreprocessor",
-    "TimeSeriesCompleter",
     "ConversionMatrixBuilder",
+    "DisaggInputPreparer",
+    "EnsemblePrediction",
+    "EnsemblePredictor",
+    "InputPreprocessor",
     "ModelsHandler",
-    "RhoOptimizer",
+    "ModelFitter",
     "NumericUtils",
     "PostEstimation",
-    "EnsemblePrediction",
+    "Retropolarizer",
+    "RhoOptimizer",
+    "TempDisaggAdjuster",
+    "TempDisaggModel",
+    "TempDisaggReporter",
+    "TempDisaggVisualizer",
     "TemporalAggregator",
+    "TimeSeriesCompleter",
 ]
 
-__version__= "0.2.5"
+# Version handling using importlib.metadata
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("tempdisagg")
+except PackageNotFoundError:
+    __version__ = "unknown"

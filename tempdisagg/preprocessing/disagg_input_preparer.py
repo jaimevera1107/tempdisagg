@@ -17,7 +17,8 @@ class DisaggInputPreparer:
     """
 
     def __init__(self, conversion, grain_col="Grain", index_col="Index",
-                 y_col="y", X_col="X", verbose=False, interpolation_method="nearest"):
+                 y_col="y", X_col="X", verbose=False, interpolation_method="nearest",
+                 use_retropolarizer=False, retro_method="linear_regression", retro_aux_col=None):
         """
         Initialize the DisaggInputPreparer instance.
 
@@ -37,8 +38,13 @@ class DisaggInputPreparer:
             Whether to enable logging messages.
         interpolation_method : str
             Method used to impute missing values during completion.
+        use_retropolarizer : bool
+            Whether to use Retropolarizer instead of standard interpolation for y_col.
+        retro_method : str
+            Method used by Retropolarizer (e.g. 'linear_regression').
+        retro_aux_col : str or None
+            Auxiliary column to use as predictor for retropolarization. If None, uses X_col.
         """
-        # Store initialization parameters
         self.conversion = conversion
         self.grain_col = grain_col
         self.index_col = index_col
@@ -46,11 +52,12 @@ class DisaggInputPreparer:
         self.X_col = X_col
         self.verbose = verbose
         self.interpolation_method = interpolation_method
+        self.use_retropolarizer = use_retropolarizer
+        self.retro_method = retro_method
+        self.retro_aux_col = retro_aux_col
         self.df_full = None
         self.padding_info = {}
 
-
-        # Create logger with verbosity control
         self.logger = VerboseLogger(f"{__name__}.{id(self)}", verbose=self.verbose).get_logger()
 
     def prepare(self, dataframe):
@@ -69,23 +76,15 @@ class DisaggInputPreparer:
             - y_l: np.ndarray of shape (n_low, 1) – low-frequency targets.
             - X:   np.ndarray of shape (n_high, 1) – high-frequency predictors.
             - C:   np.ndarray of shape (n_low, n_high) – conversion matrix.
-
-        Raises
-        ------
-        ValueError
-            If validation fails or shapes are inconsistent.
         """
-        # Validate that input is a DataFrame
         if not isinstance(dataframe, pd.DataFrame):
             raise ValueError(f"Expected input as pandas DataFrame, got {type(dataframe)}.")
 
-        # Check for required columns
         required_cols = {self.index_col, self.grain_col, self.y_col, self.X_col}
         missing = required_cols - set(dataframe.columns)
         if missing:
             raise ValueError(f"Missing required columns in DataFrame: {missing}")
 
-        # Step 1: Complete the time series
         completer = TimeSeriesCompleter(
             df=dataframe,
             index_col=self.index_col,
@@ -93,7 +92,10 @@ class DisaggInputPreparer:
             y_col=self.y_col,
             X_col=self.X_col,
             interpolation_method=self.interpolation_method,
-            verbose=self.verbose
+            verbose=self.verbose,
+            use_retropolarizer=self.use_retropolarizer,
+            retro_method=self.retro_method,
+            retro_aux_col=self.retro_aux_col
         )
         completed_df, padding_info = completer.complete_series()
         self.df_full = completed_df

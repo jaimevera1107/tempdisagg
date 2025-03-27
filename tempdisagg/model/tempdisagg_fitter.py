@@ -25,7 +25,10 @@ class ModelFitter:
         rho_min=-0.9,
         rho_max=0.99,
         fallback_method="fast",
-        verbose=False
+        verbose=False,
+        use_retropolarizer=False,
+        retro_method="linear_regression",
+        retro_aux_col=None
     ):
         """
         Initialize the ModelFitter.
@@ -51,11 +54,16 @@ class ModelFitter:
             Method used if the main one fails.
         verbose : bool
             Whether to enable logging messages.
+        use_retropolarizer : bool
+            Whether to use Retropolarizer instead of standard interpolation for y_col.
+        retro_method : str
+            Method used by Retropolarizer (e.g. 'linear_regression').
+        retro_aux_col : str or None
+            Auxiliary column to use as predictor for retropolarization. If None, uses X_col.
 
         OUTPUT
         None
         """
-        # Store parameters
         self.conversion = conversion
         self.grain_col = grain_col
         self.index_col = index_col
@@ -66,11 +74,12 @@ class ModelFitter:
         self.rho_max = rho_max
         self.fallback_method = fallback_method
         self.verbose = verbose
+        self.use_retropolarizer = use_retropolarizer
+        self.retro_method = retro_method
+        self.retro_aux_col = retro_aux_col
 
-        # Set up logger
         self.logger = VerboseLogger(f"{__name__}.{id(self)}", verbose=self.verbose).get_logger()
 
-        # Initialize preprocessing pipeline
         self.base = DisaggInputPreparer(
             conversion=self.conversion,
             grain_col=self.grain_col,
@@ -78,17 +87,18 @@ class ModelFitter:
             y_col=self.y_col,
             X_col=self.X_col,
             interpolation_method=self.interpolation_method,
-            verbose=self.verbose
+            verbose=self.verbose,
+            use_retropolarizer=self.use_retropolarizer,
+            retro_method=self.retro_method,
+            retro_aux_col=self.retro_aux_col
         )
 
-        # Initialize model engine
         self.models = ModelsHandler(
             rho_min=self.rho_min,
             rho_max=self.rho_max,
             verbose=self.verbose
         )
 
-        # Supported methods
         self.all_methods = {
             "ols": self.models.ols_estimation,
             "denton": self.models.denton_estimation,
@@ -129,20 +139,15 @@ class ModelFitter:
         RuntimeError
             If both primary and fallback estimations fail.
         """
-        # Prepare matrices and completed data
         y_l, X, C, df_full, padding_info = self.base.prepare(df)
 
-        # Check method validity
         if method not in self.all_methods:
             raise ValueError(f"Unknown method '{method}'.")
 
-        # Log selected method
         self.logger.info(f"Fitting model using method: '{method}'...")
 
-        # Attempt estimation
         result = self.all_methods[method](y_l, X, C)
 
-        # Use fallback if estimation failed
         if result is None or "y_hat" not in result:
             warnings.warn(
                 f"Estimation using method '{method}' failed. Using fallback '{self.fallback_method}'.",
@@ -154,14 +159,11 @@ class ModelFitter:
             result = fallback_func(y_l, X, C)
             method = self.fallback_method
 
-        # Extract and reshape prediction
         y_hat = np.atleast_2d(result["y_hat"]).reshape(-1, 1)
 
-        # Validate prediction length
         if y_hat.shape[0] != df_full.shape[0]:
             raise ValueError("Mismatch between `y_hat` and DataFrame length.")
 
-        # Store result dictionary
         self.result_ = {
             method: {
                 "beta": result.get("beta"),
@@ -175,7 +177,6 @@ class ModelFitter:
             }
         }
 
-        # Log success
         self.logger.info(f"Model fitting finished using method: '{method}'")
         return y_hat, padding_info, df_full
 

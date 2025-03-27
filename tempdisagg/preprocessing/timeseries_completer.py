@@ -3,6 +3,7 @@ import numpy as np
 import warnings
 
 from tempdisagg.utils.logging_utils import VerboseLogger
+from tempdisagg.preprocessing.retropolarizer import Retropolarizer
 
 
 class TimeSeriesCompleter:
@@ -12,7 +13,8 @@ class TimeSeriesCompleter:
     """
 
     def __init__(self, df, index_col, grain_col, y_col, X_col,
-                 interpolation_method='nearest', verbose=False):
+                 interpolation_method='nearest', verbose=False,
+                 use_retropolarizer=False, retro_method='linear_regression', retro_aux_col=None):
         """
         Initialize the completer.
 
@@ -31,11 +33,16 @@ class TimeSeriesCompleter:
             Primary interpolation strategy ('linear', 'nearest', etc.).
         verbose : bool
             Enables logging messages.
+        use_retropolarizer : bool
+            Whether to use Retropolarizer instead of standard interpolation for y_col.
+        retro_method : str
+            Method used by Retropolarizer (e.g. 'linear_regression').
+        retro_aux_col : str or None
+            Auxiliary column to use as predictor for retropolarization. If None, uses X_col.
 
         OUTPUT
         None
         """
-        # Store configuration
         self.df = df.copy()
         self.index_col = index_col
         self.grain_col = grain_col
@@ -43,14 +50,13 @@ class TimeSeriesCompleter:
         self.X_col = X_col
         self.interpolation_method = interpolation_method
         self.verbose = verbose
+        self.use_retropolarizer = use_retropolarizer
+        self.retro_method = retro_method
+        self.retro_aux_col = retro_aux_col
 
-        # Output placeholder
         self.df_full = pd.DataFrame()
-
-        # Initialize logger
         self.logger = VerboseLogger(f"{__name__}.{id(self)}", verbose=self.verbose).get_logger()
 
-        # Validate initial input
         self._validate_input()
 
     def complete_series(self):
@@ -63,7 +69,6 @@ class TimeSeriesCompleter:
         padding_info : dict
             Metadata including rows padded before/after.
         """
-        # Backup original structure for padding calculation
         original_df = self.df.copy()
 
         try:
@@ -74,20 +79,33 @@ class TimeSeriesCompleter:
             self.logger.error(f"Failed to create full index: {e}")
             return self.df_full, {}
 
-        # Impute both target and regressors
-        for col in [self.y_col, self.X_col]:
-            try:
-                if self.verbose:
-                    self.logger.info(f"Imputing values in column: '{col}'...")
-                self._impute_column(col)
-            except Exception as e:
-                self.logger.error(f"Imputation failed for '{col}': {e}")
-                return self.df_full, {}
+        # Impute y_col with possible Retropolarizer
+        try:
+            if self.verbose:
+                self.logger.info(f"Imputing values in column: '{self.y_col}'...")
 
-        # Final validation of imputation
+            if self.use_retropolarizer:
+                old_col = self.retro_aux_col if self.retro_aux_col else self.X_col
+                retro = Retropolarizer(self.df_full, new_col=self.y_col, old_col=old_col, verbose=self.verbose)
+                self.df_full[self.y_col] = retro.retropolarize(method=self.retro_method)
+            else:
+                self._impute_column(self.y_col)
+
+        except Exception as e:
+            self.logger.error(f"Imputation failed for '{self.y_col}': {e}")
+            return self.df_full, {}
+
+        # Impute X_col normally
+        try:
+            if self.verbose:
+                self.logger.info(f"Imputing values in column: '{self.X_col}'...")
+            self._impute_column(self.X_col)
+        except Exception as e:
+            self.logger.error(f"Imputation failed for '{self.X_col}': {e}")
+            return self.df_full, {}
+
         self._validate_output_no_nans()
 
-        # Compute padding info (based on location of original rows)
         original_pairs = list(zip(original_df[self.index_col], original_df[self.grain_col]))
         completed_pairs = list(zip(self.df_full[self.index_col], self.df_full[self.grain_col]))
 
@@ -108,7 +126,6 @@ class TimeSeriesCompleter:
             "n_pad_after": n_pad_after
         }
 
-        # Cascading fallback imputation if any NaNs remain
         for col in [self.y_col, self.X_col]:
             if self.df_full[col].isna().any():
                 self.df_full[col] = (
@@ -125,24 +142,20 @@ class TimeSeriesCompleter:
         Internal validation of input DataFrame and columns.
         """
         try:
-            # Required columns
             required_cols = [self.index_col, self.grain_col, self.y_col, self.X_col]
             for col in required_cols:
                 if col not in self.df.columns:
                     raise ValueError(f"Missing required column: '{col}'")
 
-            # Must have non-missing values
             for col in [self.y_col, self.X_col]:
                 if self.df[col].dropna().empty:
                     raise ValueError(f"Column '{col}' contains only missing values.")
 
-            # Type conversions
             self.df[self.index_col] = self.df[self.index_col].astype(int)
             self.df[self.grain_col] = self.df[self.grain_col].astype(int)
             self.df[self.y_col] = pd.to_numeric(self.df[self.y_col], errors='coerce')
             self.df[self.X_col] = pd.to_numeric(self.df[self.X_col], errors='coerce')
 
-            # Minimum size
             if self.df.shape[0] < 3:
                 raise ValueError("At least 3 observations are required for interpolation.")
 
@@ -157,11 +170,9 @@ class TimeSeriesCompleter:
         Internal method to generate complete MultiIndex of all combinations.
         """
         try:
-            # Get all unique groups and grains
             all_indices = sorted(self.df[self.index_col].unique())
             all_grains = sorted(self.df[self.grain_col].unique())
 
-            # Padding forward if last group is incomplete
             last_index = all_indices[-1]
             df_last = self.df[self.df[self.index_col] == last_index]
             missing_grains = [g for g in all_grains if g not in df_last[self.grain_col].unique()]
@@ -176,7 +187,6 @@ class TimeSeriesCompleter:
                 })
                 self.df = pd.concat([self.df, filler], ignore_index=True)
 
-            # Padding backward if first group is incomplete
             first_index = all_indices[0]
             df_first = self.df[self.df[self.index_col] == first_index]
             missing_grains_first = [g for g in all_grains if g not in df_first[self.grain_col].unique()]
@@ -191,14 +201,12 @@ class TimeSeriesCompleter:
                 })
                 self.df = pd.concat([filler_start, self.df], ignore_index=True)
 
-            # Create full MultiIndex
             all_indices_full = sorted(self.df[self.index_col].unique())
             full_index = pd.MultiIndex.from_product(
                 [all_indices_full, all_grains],
                 names=[self.index_col, self.grain_col]
             )
 
-            # Reindex and reset
             self.df_full = (
                 self.df.set_index([self.index_col, self.grain_col])
                 .reindex(full_index)
@@ -225,10 +233,8 @@ class TimeSeriesCompleter:
         None
         """
         try:
-            # Count missing values before
             before = self.df_full[col_name].isna().sum()
 
-            # Apply primary + fallback imputation
             self.df_full[col_name] = (
                 self.df_full[col_name]
                 .interpolate(method=self.interpolation_method, limit_direction='both')
@@ -236,7 +242,6 @@ class TimeSeriesCompleter:
                 .interpolate(method='nearest', limit_direction='both')
             )
 
-            # Count missing values after
             after = self.df_full[col_name].isna().sum()
 
             if after > 0:
@@ -258,7 +263,6 @@ class TimeSeriesCompleter:
         OUTPUT
         None
         """
-        # Check both target and regressor columns
         missing = self.df_full[[self.y_col, self.X_col]].isna().sum()
 
         if missing.any():

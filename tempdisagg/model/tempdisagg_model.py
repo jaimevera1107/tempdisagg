@@ -26,7 +26,10 @@ class TempDisaggModel:
         rho_min=-0.9,
         rho_max=0.99,
         fallback_method="fast",
-        verbose=False
+        verbose=False,
+        use_retropolarizer=False,
+        retro_method="linear_regression",
+        retro_aux_col=None
     ):
         """
         Initialize the disaggregation interface.
@@ -46,6 +49,12 @@ class TempDisaggModel:
             Backup method if main estimation fails.
         verbose : bool
             Enables logging messages.
+        use_retropolarizer : bool
+            Whether to use Retropolarizer instead of standard interpolation for y_col.
+        retro_method : str
+            Method used by Retropolarizer (e.g. 'proportion', 'linear_regression', 'polynomial_regression', 'exponential_smoothing', 'mlp_regression').
+        retro_aux_col : str or None
+            Auxiliary column to use as predictor for retropolarization. If None, uses X_col.
 
         OUTPUT
         None
@@ -55,16 +64,13 @@ class TempDisaggModel:
         self.verbose = verbose
         self.is_ensemble = method == "ensemble"
 
-        # Logger
         self.logger = VerboseLogger(f"{__name__}.{id(self)}", verbose=verbose).get_logger()
 
-        # Result containers
         self._y_hat = None
         self._adjusted = None
         self._padding_info = None
         self._df = None
 
-        # Store column names and parameters
         self.grain_col = grain_col
         self.index_col = index_col
         self.y_col = y_col
@@ -74,7 +80,6 @@ class TempDisaggModel:
         self.rho_max = rho_max
         self.fallback_method = fallback_method
 
-        # Components
         self.fitter = ModelFitter(
             conversion=conversion,
             grain_col=grain_col,
@@ -85,7 +90,10 @@ class TempDisaggModel:
             rho_min=rho_min,
             rho_max=rho_max,
             fallback_method=fallback_method,
-            verbose=verbose
+            verbose=verbose,
+            use_retropolarizer=use_retropolarizer,
+            retro_method=retro_method,
+            retro_aux_col=retro_aux_col
         )
 
         self.ensemble_predictor = EnsemblePredictor(
@@ -98,25 +106,15 @@ class TempDisaggModel:
             rho_min=rho_min,
             rho_max=rho_max,
             fallback_method=fallback_method,
-            verbose=verbose
+            verbose=verbose,
+            use_retropolarizer=use_retropolarizer,
+            retro_method=retro_method,
+            retro_aux_col=retro_aux_col
         ) if self.is_ensemble else None
 
         self.adjuster = PostEstimation(conversion=conversion)
 
     def fit(self, df, methods=None):
-        """
-        Fit the model or ensemble on the provided DataFrame.
-
-        INPUT
-        df : pandas.DataFrame
-            Input dataset.
-        methods : list or None
-            List of methods (only for ensemble).
-
-        OUTPUT
-        self : TempDisaggModel
-            Fitted model instance.
-        """
         if self.is_ensemble:
             self._y_hat, self._padding_info, self._df = self.ensemble_predictor.fit(df, methods)
             self.ensemble = self.ensemble_predictor.ensemble
@@ -133,33 +131,11 @@ class TempDisaggModel:
         return self
 
     def predict(self, full=True):
-        """
-        Return predicted high-frequency series.
-
-        INPUT
-        full : bool
-            Whether to return full padded output.
-
-        OUTPUT
-        y_hat : np.ndarray
-            Prediction.
-        """
         if self._y_hat is None:
             raise RuntimeError("Model must be fitted before calling `predict()`.")
         return self._truncate(self._y_hat, full)
 
     def adjust_output(self, full=True):
-        """
-        Adjust predicted series with post-estimation fixes.
-
-        INPUT
-        full : bool
-            Whether to include padding.
-
-        OUTPUT
-        y_hat_adjusted : np.ndarray
-            Corrected series.
-        """
         if self._y_hat is None:
             raise RuntimeError("Model must be fitted before calling `adjust_output()`.")
 
@@ -171,16 +147,6 @@ class TempDisaggModel:
         return self._truncate(self._adjusted, full)
 
     def plot(self, use_adjusted=False, **kwargs):
-        """
-        Plot disaggregated prediction.
-
-        INPUT
-        use_adjusted : bool
-            Whether to include adjusted prediction.
-
-        OUTPUT
-        None
-        """
         if self._df is None:
             raise RuntimeError("Model must be fitted before plotting.")
 
@@ -189,39 +155,13 @@ class TempDisaggModel:
 
         return TempDisaggVisualizer.plot(self, use_adjusted=use_adjusted, **kwargs)
 
-    def summary(self):
-        """
-        Return summary of model fit.
-
-        OUTPUT
-        summary : dict
-            Model summary including weights and coefficients.
-        """
-        if self.is_ensemble:
-            return self.ensemble_predictor.summary()
-        else:
-            return TempDisaggReporter.summary(self)
+    def summary(self, metric="mae"):
+        return TempDisaggReporter.summary(self, metric=metric)
 
     def summary_compact(self):
-        """
-        Print compact summary table.
-
-        OUTPUT
-        None
-        """
-        if self.is_ensemble:
-            return self.ensemble_predictor.summary_compact()
-        else:
-            return TempDisaggReporter.summary_compact(self)
+        return TempDisaggReporter.summary_compact(self)
 
     def get_params(self, deep=True):
-        """
-        Return parameter configuration.
-
-        OUTPUT
-        params : dict
-            Model configuration dictionary.
-        """
         return {
             "method": self.method,
             "conversion": self.conversion,
@@ -237,35 +177,12 @@ class TempDisaggModel:
         }
 
     def set_params(self, **params):
-        """
-        Update configuration parameters.
-
-        INPUT
-        params : dict
-            Parameters to update.
-
-        OUTPUT
-        self : TempDisaggModel
-            Updated model.
-        """
         for key, value in params.items():
             if hasattr(self, key):
                 setattr(self, key, value)
         return self
 
     def _truncate(self, arr, full):
-        """
-        Internal utility to slice padding.
-
-        INPUT
-        arr : np.ndarray
-            Array to slice.
-        full : bool
-            Whether to include padding.
-
-        OUTPUT
-        trimmed : np.ndarray
-        """
         if full or self._padding_info is None:
             return arr
 
@@ -273,27 +190,3 @@ class TempDisaggModel:
         n_after = self._padding_info.get("n_pad_after", 0)
 
         return arr[n_before: -n_after if n_after else None]
-    
-    def summary(self, metric="mae"):
-        """
-        Print a detailed statistical summary of the model.
-
-        INPUT
-        metric : str
-            Error metric to use ('mae', 'rmse', 'mse').
-
-        OUTPUT
-        None
-        """
-        return TempDisaggReporter.summary(self, metric=metric)
-    
-    def summary_compact(self):
-        """
-        Print compact summary of ensemble or individual methods.
-
-        OUTPUT
-        None
-        """
-        return TempDisaggReporter.summary_compact(self)
-
-
