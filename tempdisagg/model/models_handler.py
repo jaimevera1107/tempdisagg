@@ -360,50 +360,7 @@ class ModelsHandler:
 
         except Exception as e:
             self.logger.error(f"Optimized Litterman failed: {e}")
-            return None
-        
-    def denton_opt_estimation(self, y_l, X, C, h_values=[1, 2, 3, 4]):
-        """
-        Run Denton method over multiple differencing orders and select the best based on minimum RSS.
-
-        Parameters
-        ----------
-        y_l : np.ndarray
-            Low-frequency target series.
-        X : np.ndarray
-            High-frequency regressor series.
-        C : np.ndarray
-            Conversion matrix from high to low frequency.
-        h_values : list, default=[1, 2, 3]
-            List of differencing orders to evaluate.
-
-        Returns
-        -------
-        dict or None
-            Best estimation result dictionary with keys 'y_hat', 'beta', 'residuals', 'Q', 'vcov', and selected 'h'.
-            Returns None if all estimations fail.
-        """
-        best_result = None
-        min_rss = np.inf
-
-        for h in h_values:
-            result = self.denton_estimation(y_l, X, C, h=h)
-            if result is not None:
-                rss = float((result["residuals"].T @ result["residuals"]).item())
-                if rss < min_rss:
-                    min_rss = rss
-                    best_result = result
-                    best_result["h"] = h
-
-        if best_result is None:
-            self.logger.error("All Denton estimations failed.")
-            return None
-
-        if self.verbose:
-            self.logger.info(f"Best Denton estimation selected with h = {best_result['h']} (RSS = {min_rss:.4f})")
-
-        return best_result
-    
+            return None 
 
     def denton_cholette_estimation(self,y_l, X, C, base_series=None, weights=None):
         """

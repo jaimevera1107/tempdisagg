@@ -28,10 +28,4 @@ __all__ = [
     "TimeSeriesCompleter",
 ]
 
-# Version handling using importlib.metadata
-from importlib.metadata import version, PackageNotFoundError
-
-try:
-    __version__ = version("tempdisagg")
-except PackageNotFoundError:
-    __version__ = "unknown"
+__version__ = "0.2.7"
