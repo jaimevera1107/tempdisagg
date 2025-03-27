@@ -3,7 +3,7 @@ import numpy as np
 import warnings
 
 from tempdisagg.utils.logging_utils import VerboseLogger
-from tempdisagg.preprocessing.retropolarizer import Retropolarizer
+from tempdisagg.utils.retropolarizer import Retropolarizer
 
 
 class TimeSeriesCompleter:
