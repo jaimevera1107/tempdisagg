@@ -164,9 +164,8 @@ For missing values in the target (`y`), you can activate the **Retropolarizer**:
 
 ```python
 from tempdisagg import Retropolarizer
-
-retro = Retropolarizer(method="linear_regression")
-df["y_imputed"] = retro.fit_transform(df, target_col="y", aux_col="X")
+retro = Retropolarizer(df = data, new_col = "new", old_col = "old")
+df["y_imputed"] = retro.retropolarize(method='proportion')
 ```
 
 Or use it inside any model:

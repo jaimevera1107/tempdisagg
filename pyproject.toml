@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tempdisagg"
-version = "0.2.9"
+version = "0.2.11"
 description = "Temporal disaggregation models in Python"
 readme = "README.md"
 authors = [
