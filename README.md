@@ -37,7 +37,7 @@ Official indicators often come in low frequency (e.g. yearly GDP), while economi
 |-------------------------------------------------------------------------|---------------------------------------------------------------|
 | `ols`                                                                   | Ordinary Least Squares (baseline)                             |
 | `denton`                                                                | Denton interpolation with differencing                        |
-| `denton-colette`                                                        | Cholette smoother variant from Dagum & Cholette               |
+| `denton-cholette`                                                       | Cholette smoother variant from Dagum & Cholette               |
 | `chow-lin`, `chow-lin-opt`, `chow-lin-ecotrim`, `chow-lin-quilis`       | Regression + AR(1) residual modeling                          |
 | `litterman`, `litterman-opt`                                            | Random walk / AR(1) prior models                              |
 | `fernandez`                                                             | Fixed-ρ Litterman (ρ = 0)                                     |
