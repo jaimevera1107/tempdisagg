@@ -99,7 +99,7 @@ class EnsemblePredictor:
             methods = [
                 "ols", "denton", "chow-lin", "litterman", "fernandez", "fast",
                 "chow-lin-opt", "litterman-opt", "chow-lin-ecotrim", "chow-lin-quilis",
-                "denton-opt", "denton-colette", "uniform"
+                "denton-opt", "denton-cholette", "uniform"
             ]
             self.logger.info(f"No methods specified. Using all available: {methods}")
 

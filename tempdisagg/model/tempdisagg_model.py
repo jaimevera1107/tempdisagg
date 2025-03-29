@@ -112,7 +112,9 @@ class TempDisaggModel:
             retro_aux_col=retro_aux_col
         ) if self.is_ensemble else None
 
-        self.adjuster = PostEstimation(conversion=conversion)
+        self.adjuster = PostEstimation(conversion=conversion,
+                                       index_col=index_col,
+                                       verbose=verbose)
 
     def fit(self, df, methods=None):
         if self.is_ensemble:

@@ -130,7 +130,7 @@ class TempDisaggModelCore:
             "litterman-opt": self.models.litterman_opt_estimation,
             "chow-lin-ecotrim": self.models.chow_lin_minrss_ecotrim,
             "chow-lin-quilis": self.models.chow_lin_minrss_quilis,
-            "denton-colette": self.models.denton_cholette_estimation,
+            "denton-cholette": self.models.denton_cholette_estimation,
             "uniform": self.models.uniform_estimation
         }
 
