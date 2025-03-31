@@ -265,6 +265,29 @@ Index | Grain | y     | X
 
 ---
 
+## 📄 Cite this work
+
+
+This project is accompanied by a scientific publication available on **arXiv**:
+
+> Jaime A. Jaramillo-Vera. (2025). *tempdisagg: A Python Library for Temporal Disaggregation of Time Series*. arXiv:2503.22054 [econ.EM].  
+> [🔗 View on arXiv](https://arxiv.org/abs/2503.22054)
+
+If you use this library in your research, please cite the paper to support the development and visibility of the project.
+
+```bibtex
+@misc{jaramillo2025tempdisagg,
+  title        = {tempdisagg: A Python Library for Temporal Disaggregation of Time Series},
+  author       = {Jaime A. Jaramillo-Vera},
+  year         = {2025},
+  eprint       = {2503.22054},
+  archivePrefix = {arXiv},
+  primaryClass = {econ.EM},
+  url          = {https://arxiv.org/abs/2503.22054}
+}
+```
+---
+
 ## 📚 References
 
 - Dagum & Cholette (2006), *Benchmarking, Temporal Distribution, and Reconciliation Methods*  
