@@ -276,7 +276,7 @@ This project is accompanied by a scientific publication available on **arXiv**:
 If you use this library in your research, please cite the paper to support the development and visibility of the project.
 
 ```bibtex
-@misc{jaramillo2025tempdisagg,
+@misc{verajaramillo2025tempdisagg,
   title        = {tempdisagg: A Python Library for Temporal Disaggregation of Time Series},
   author       = {Jaime A. Jaramillo-Vera},
   year         = {2025},
