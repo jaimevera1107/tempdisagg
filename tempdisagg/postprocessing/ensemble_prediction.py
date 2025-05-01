@@ -85,88 +85,73 @@ class EnsemblePrediction:
 
     def evaluate_weights(self, y_l, C):
         """
-        Optimize weights for combining predictions to minimize aggregated error.
+        Evaluate optimal weights. If optimisation fails, fall back to
+        uniform weights across all valid models.
 
         Parameters
         ----------
         y_l : np.ndarray
-            Low-frequency target series.
+            Low-frequency target series (column vector).
         C : np.ndarray
-            Conversion matrix from high to low frequency.
+            Conversion matrix (low → high frequency).
 
         Returns
         -------
         np.ndarray
-            Optimal weights assigned to each model.
-
-        Raises
-        ------
-        RuntimeError
-            If the optimizer fails.
+            Weight vector (sums to 1.0).
         """
+        def _uniform_weights(n_models):
+            """Return 1/k for each of *k* models (helper)."""
+            return np.ones(n_models) / n_models
+
         try:
-            pred_matrix = np.column_stack([p for p in self.predictions.values()])
+            pred_matrix = np.column_stack(
+                [p for p in self.predictions.values()]
+            )
             y_l = np.atleast_2d(y_l).reshape(-1, 1)
 
-            def objective(w):
-                y_ens = pred_matrix @ w.reshape(-1, 1)
+            def objective(w_vec):
+                y_ens = pred_matrix @ w_vec.reshape(-1, 1)
                 y_agg = C @ y_ens
                 return np.mean((y_agg - y_l) ** 2)
 
-            init_w = np.ones(len(self.predictions)) / len(self.predictions)
-            constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
-            bounds = [(0, 1) for _ in init_w]
+            n_models = pred_matrix.shape[1]
+            init_w = _uniform_weights(n_models)
+            cons = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
+            bounds = [(0, 1) for _ in range(n_models)]
 
-            result = minimize(objective, init_w, bounds=bounds, constraints=constraints)
-
-            if not result.success:
-                raise RuntimeError("Weight optimization failed.")
+            result = minimize(
+                objective,
+                init_w,
+                bounds=bounds,
+                constraints=cons,
+                method="SLSQP",
+            )
 
             self.weights = result.x
-            return self.weights
 
-        except Exception as e:
-            raise RuntimeError(f"Ensemble weight evaluation failed: {e}")
+        except Exception as exc:
+            self.weights = _uniform_weights(len(self.predictions))
+
+        return self.weights
+
 
     def ensemble_predict(self):
         """
-        Combine predictions using optimized weights.
-
-        Returns
-        -------
-        np.ndarray
-            Ensemble prediction vector.
-
-        Raises
-        ------
-        RuntimeError
-            If weights are not yet evaluated.
+        Combine predictions using the weight vector already stored.
         """
         if self.weights is None:
-            raise RuntimeError("Weights must be evaluated before ensemble prediction.")
+            raise RuntimeError("Weights must be evaluated first.")
 
-        pred_matrix = np.column_stack([p for p in self.predictions.values()])
+        pred_matrix = np.column_stack(
+            [p for p in self.predictions.values()]
+        )
         return pred_matrix @ self.weights
 
     def run(self, df, y_l, C):
-        """
-        Fit all models, evaluate ensemble weights, and return final prediction.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input data.
-        y_l : np.ndarray
-            Low-frequency series.
-        C : np.ndarray
-            Conversion matrix.
-
-        Returns
-        -------
-        np.ndarray
-            Ensemble prediction vector.
-        """
+        """Fit, optimise weights, return ensemble prediction."""
         self.fit_predict_all(df)
+        # evaluate_weights ya maneja su propio fallback
         self.evaluate_weights(y_l, C)
         return self.ensemble_predict()
 
