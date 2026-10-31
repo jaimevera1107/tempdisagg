@@ -28,7 +28,7 @@ class Conversion(str, Enum):
     LAST = "last"
 
     @classmethod
-    def parse(cls, value: "Conversion | str") -> "Conversion":
+    def parse(cls, value: Conversion | str) -> Conversion:
         """Return the enum member for ``value``.
 
         Raises

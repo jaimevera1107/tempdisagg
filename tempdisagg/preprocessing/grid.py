@@ -29,8 +29,8 @@ With completion disabled, any added label or missing value raises an error
 from __future__ import annotations
 
 import warnings
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 import numpy as np
 import pandas as pd

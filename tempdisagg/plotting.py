@@ -12,7 +12,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.figure import Figure
 
 
-def plot_result(result: DisaggregationResult, **figure_kwargs: Any) -> "Figure":
+def plot_result(result: DisaggregationResult, **figure_kwargs: Any) -> Figure:
     """Plot the high-frequency estimate and the low-frequency residuals.
 
     The top panel shows the estimate; extrapolated periods (not covered by an

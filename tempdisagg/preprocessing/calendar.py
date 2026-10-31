@@ -19,7 +19,8 @@ GrainCalendar      (index, grain) pairs        ``fit_long_format``
 
 from __future__ import annotations
 
-from typing import Protocol, Sequence
+from collections.abc import Sequence
+from typing import Protocol
 
 import numpy as np
 import pandas as pd
@@ -54,6 +55,7 @@ class PeriodCalendar:
         self.high_freq = high_freq
 
     def subperiods(self, low: pd.Period) -> pd.Index:
+        """Return high-frequency periods within the given low-frequency period."""
         index = pd.period_range(low.asfreq(self.high_freq, how="start"),
                                 low.asfreq(self.high_freq, how="end"), freq=self.high_freq)
         if len(index) < 2:
@@ -63,15 +65,19 @@ class PeriodCalendar:
         return index
 
     def parents(self, high: pd.Index) -> pd.Index:
+        """Map high-frequency periods to their low-frequency parents."""
         return pd.PeriodIndex(high, freq=self.high_freq).asfreq(self.low_freq)
 
     def shift(self, low: pd.Period, steps: int) -> pd.Period:
+        """Shift a low-frequency period by the requested number of steps."""
         return low + steps
 
     def low_range(self, first: pd.Period, last: pd.Period) -> pd.Index:
+        """Return the inclusive range of low-frequency periods."""
         return pd.period_range(first, last, freq=self.low_freq)
 
     def high_index(self, labels: Sequence[object]) -> pd.Index:
+        """Build a high-frequency PeriodIndex from the given labels."""
         return pd.PeriodIndex(list(labels), freq=self.high_freq)
 
 
@@ -84,18 +90,23 @@ class RatioCalendar:
         self.ratio = int(ratio)
 
     def subperiods(self, low: int) -> pd.Index:
+        """Return high-frequency integer positions within a low-frequency period."""
         return pd.Index(range(int(low) * self.ratio, (int(low) + 1) * self.ratio))
 
     def parents(self, high: pd.Index) -> pd.Index:
+        """Map high-frequency positions to their low-frequency parents."""
         return pd.Index(np.asarray(high, dtype=int) // self.ratio)
 
     def shift(self, low: int, steps: int) -> int:
+        """Shift a low-frequency integer position by the given number of steps."""
         return int(low) + steps
 
     def low_range(self, first: int, last: int) -> pd.Index:
+        """Return the inclusive range of low-frequency integer positions."""
         return pd.Index(range(int(first), int(last) + 1))
 
     def high_index(self, labels: Sequence[object]) -> pd.Index:
+        """Build an integer index of high-frequency labels."""
         return pd.Index(list(labels), dtype=int)
 
 
@@ -114,20 +125,25 @@ class GrainCalendar:
         self._labels = pd.Index(sorted(set(low_labels)))
 
     def subperiods(self, low: object) -> pd.Index:
+        """Return the low-frequency label paired with each configured grain."""
         return pd.MultiIndex.from_tuples([(low, grain) for grain in self.grains])
 
     def parents(self, high: pd.Index) -> pd.Index:
+        """Extract the low-frequency parents of a multi-level index."""
         return pd.Index(high.get_level_values(0))
 
     def shift(self, low: object, steps: int) -> object:
+        """Shift a numeric low-frequency label by the given number of steps."""
         if not self.numeric:
             raise InputValidationError("Padding requires integer low-frequency labels.")
         return int(low) + steps
 
     def low_range(self, first: object, last: object) -> pd.Index:
+        """Return the available low-frequency labels between the given endpoints."""
         if not self.numeric:
             return self._labels[(self._labels >= first) & (self._labels <= last)]
         return pd.Index(range(int(first), int(last) + 1))
 
     def high_index(self, labels: Sequence[object]) -> pd.Index:
+        """Build a MultiIndex from the given low-frequency and grain labels."""
         return pd.MultiIndex.from_tuples(list(labels))

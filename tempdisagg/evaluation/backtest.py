@@ -32,8 +32,8 @@ all metrics and at the per-origin errors, not only at the ranking.
 from __future__ import annotations
 
 import warnings
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Mapping
 
 import numpy as np
 import pandas as pd
@@ -117,7 +117,7 @@ def backtest(
     holdout: int = 3,
     high_freq: str | None = None,
 ) -> BacktestResult:
-    """Rolling one-step-ahead backtest of the low-frequency aggregate.
+    """Run a rolling one-step-ahead backtest of the low-frequency aggregate.
 
     Parameters
     ----------

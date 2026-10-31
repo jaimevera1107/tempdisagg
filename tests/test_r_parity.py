@@ -59,10 +59,17 @@ ABSOLUTE_STATISTICS: frozenset[str] = frozenset({"r.squared", "adj.r.squared"})
 
 #: Statistics compared with R (R name -> attribute of RegressionStatistics).
 COMPARED_STATISTICS: dict[str, str] = {
-    "s_2": "sigma2_ml", "s_2_gls": "sigma2_gls", "rss": "rss", "tss": "tss",
-    "r.squared": "r_squared", "adj.r.squared": "adj_r_squared",
-    "logl": "log_likelihood", "aic": "aic", "bic": "bic",
+    "s_2": "sigma2_ml",
+    "s_2_gls": "sigma2_gls",
+    "rss": "rss",
+    "tss": "tss",
+    "r.squared": "r_squared",
+    "adj.r.squared": "adj_r_squared",
+    "logl": "log_likelihood",
+    "aic": "aic",
+    "bic": "bic",
 }
+
 
 def _require(path: Path) -> None:
     if not path.exists():
@@ -74,7 +81,10 @@ def _require(path: Path) -> None:
 
 def _quarter_index(years: pd.Series, quarters: pd.Series) -> pd.PeriodIndex:
     return pd.PeriodIndex(
-        [pd.Period(year=int(y), quarter=int(q), freq="Q") for y, q in zip(years, quarters)]
+        [
+            pd.Period(year=int(y), quarter=int(q), freq="Q")
+            for y, q in zip(years, quarters, strict=False)
+        ]
     )
 
 
@@ -83,14 +93,22 @@ def _swisspharma() -> tuple[dict[str, pd.Series], pd.DataFrame]:
     annual = pd.read_csv(REFERENCE_DIR / "swisspharma_annual.csv")
     quarterly = pd.read_csv(REFERENCE_DIR / "swisspharma_quarterly.csv")
     indicators = quarterly[["exports_q", "imports_q"]].set_index(
-        _quarter_index(quarterly["year"], quarterly["quarter"]))
-    sales = pd.Series(annual["sales_a"].to_numpy(),
-                      index=pd.PeriodIndex(annual["year"].astype(str), freq="Y"))
+        _quarter_index(quarterly["year"], quarterly["quarter"])
+    )
+    sales = pd.Series(
+        annual["sales_a"].to_numpy(), index=pd.PeriodIndex(annual["year"].astype(str), freq="Y")
+    )
     return {"sales": sales}, indicators
 
 
-def _fit(target: pd.Series, indicators: pd.DataFrame, columns: list[str], preset: str,
-         overrides: dict, conversion: str):
+def _fit(
+    target: pd.Series,
+    indicators: pd.DataFrame,
+    columns: list[str],
+    preset: str,
+    overrides: dict,
+    conversion: str,
+):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         model = TemporalDisaggregator(preset, conversion, **overrides)
@@ -125,16 +143,23 @@ def test_vignette_m3_chow_lin_one_indicator() -> None:
 def test_vignette_m3_without_truncation() -> None:
     """``td(sales.a ~ exports.q, truncated.rho = -1)``."""
     targets, indicators = _swisspharma()
-    result = _fit(targets["sales"], indicators, ["exports_q"], "chow-lin-maxlog",
-                  {"truncated_rho": -1}, "sum")
+    result = _fit(
+        targets["sales"],
+        indicators,
+        ["exports_q"],
+        "chow-lin-maxlog",
+        {"truncated_rho": -1},
+        "sum",
+    )
     np.testing.assert_allclose(result.coefficients, [12.31579, 0.01341], rtol=5e-4)
 
 
 def test_vignette_m4_two_indicators() -> None:
     """``td(sales.a ~ exports.q + imports.q)``."""
     targets, indicators = _swisspharma()
-    result = _fit(targets["sales"], indicators, ["exports_q", "imports_q"],
-                  "chow-lin-maxlog", {}, "sum")
+    result = _fit(
+        targets["sales"], indicators, ["exports_q", "imports_q"], "chow-lin-maxlog", {}, "sum"
+    )
     reg = result.regression
     np.testing.assert_allclose(reg.coefficients, [11.685855, 0.011258, 0.003934], rtol=5e-4)
     np.testing.assert_allclose(reg.standard_errors, [1.493077, 0.001158, 0.002113], rtol=5e-4)
@@ -187,17 +212,16 @@ def test_denton_1971_example_matches_r(case_id: str) -> None:
 # ----------------------------------------------------------------------
 # Helpers
 # ----------------------------------------------------------------------
-def _fit_at(result, columns: list[str], target: pd.Series, indicators: pd.DataFrame,
-            rho: float):
+def _fit_at(result, columns: list[str], target: pd.Series, indicators: pd.DataFrame, rho: float):
     """Re-fit the same specification with rho fixed at ``rho``."""
-    spec = dataclasses.replace(result.method, rho_method="fixed", fixed_rho=rho,
-                               truncated_rho=0.0)
+    spec = dataclasses.replace(result.method, rho_method="fixed", fixed_rho=rho, truncated_rho=0.0)
     model = TemporalDisaggregator(spec, result.data.conversion)
     return model.fit(target, indicators[columns]) if columns else model.fit(target, high_freq="Q")
 
 
-def _criterion_at(result, columns: list[str], target: pd.Series, indicators: pd.DataFrame,
-                  rho: float) -> float:
+def _criterion_at(
+    result, columns: list[str], target: pd.Series, indicators: pd.DataFrame, rho: float
+) -> float:
     """Estimation criterion of the same specification evaluated at ``rho``."""
     window = RhoOptimizerSettings(bounds=(rho - 1e-9, rho + 1e-9), grid_size=3)
     spec = dataclasses.replace(result.method, truncated_rho=-1.0, optimizer=window)
@@ -211,17 +235,23 @@ def _criterion_at(result, columns: list[str], target: pd.Series, indicators: pd.
 def _compare(result, case_id: str, meta: pd.Series, rtol: float) -> None:
     expected = pd.read_csv(REFERENCE_DIR / f"r_{case_id}.csv")
     expected_index = _quarter_index(expected["year"], expected["quarter"])
-    np.testing.assert_allclose(result.values.reindex(expected_index).to_numpy(),
-                               expected["value"].to_numpy(), rtol=rtol, err_msg="prediction")
+    np.testing.assert_allclose(
+        result.values.reindex(expected_index).to_numpy(),
+        expected["value"].to_numpy(),
+        rtol=rtol,
+        err_msg="prediction",
+    )
     if result.regression is None:
         return
     reg = result.regression
     r_coefficients = meta[meta.index.str.startswith("coef_")].to_numpy()
     r_errors = meta[meta.index.str.startswith("se_")].to_numpy()
-    np.testing.assert_allclose(reg.coefficients.to_numpy(), r_coefficients, rtol=rtol,
-                               err_msg="coefficients")
-    np.testing.assert_allclose(reg.standard_errors.to_numpy(), r_errors, rtol=rtol,
-                               err_msg="standard errors")
+    np.testing.assert_allclose(
+        reg.coefficients.to_numpy(), r_coefficients, rtol=rtol, err_msg="coefficients"
+    )
+    np.testing.assert_allclose(
+        reg.standard_errors.to_numpy(), r_errors, rtol=rtol, err_msg="standard errors"
+    )
     for r_name, attribute in COMPARED_STATISTICS.items():
         value = meta.get(r_name, np.nan)
         if np.isnan(value):

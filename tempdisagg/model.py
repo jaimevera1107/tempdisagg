@@ -27,14 +27,14 @@ run without them; pass ``high_freq`` to set the output frequency.
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+import warnings
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from tempdisagg.core.aggregation import Conversion
-import warnings
-
 from tempdisagg.core.constraints import LinearConstraint
 from tempdisagg.core.data import DataAligner, DisaggregationData
 from tempdisagg.estimation.base import MethodOutput

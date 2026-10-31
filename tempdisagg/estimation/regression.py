@@ -37,7 +37,7 @@ Algorithm
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 from scipy.linalg import cho_solve

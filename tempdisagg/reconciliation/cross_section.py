@@ -39,9 +39,9 @@ Journal of the Royal Statistical Society C, 60(2), 143-164.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import Mapping
 
 import numpy as np
 import pandas as pd
@@ -293,7 +293,7 @@ class CrossSectionalReconciler:
             if members.size == 0:
                 continue
             weights = self._row_weights(members, rule)
-            for s, column in enumerate(values.columns):
+            for column in values.columns:
                 target = targets.loc[period, column]
                 if not np.isnan(target):
                     worst = max(worst, abs(float(weights @ values[column].to_numpy()[members])

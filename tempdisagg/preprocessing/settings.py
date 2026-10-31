@@ -154,7 +154,7 @@ class PaddingSettings:
         return self.before > 0 or self.after > 0
 
 
-def as_completion(value: "CompletionSettings | bool | None") -> CompletionSettings:
+def as_completion(value: CompletionSettings | bool | None) -> CompletionSettings:
     """Normalise ``completion=`` arguments (bool or settings)."""
     if value is None or value is True:
         return CompletionSettings()
@@ -165,7 +165,7 @@ def as_completion(value: "CompletionSettings | bool | None") -> CompletionSettin
     raise InputValidationError("completion must be a bool or CompletionSettings.")
 
 
-def as_padding(value: "PaddingSettings | int | tuple[int, int] | None") -> PaddingSettings:
+def as_padding(value: PaddingSettings | int | tuple[int, int] | None) -> PaddingSettings:
     """Normalise ``padding=`` arguments (int, (before, after) or settings)."""
     if value is None:
         return PaddingSettings()

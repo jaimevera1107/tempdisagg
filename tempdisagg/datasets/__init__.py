@@ -50,7 +50,7 @@ def load_swisspharma() -> tuple[pd.Series, pd.DataFrame]:
     quarterly = _read("swisspharma_quarterly.csv")
     index = pd.PeriodIndex(
         [pd.Period(year=int(y), quarter=int(q), freq="Q")
-         for y, q in zip(quarterly["year"], quarterly["quarter"])])
+         for y, q in zip(quarterly["year"], quarterly["quarter"], strict=False)])
     trade = pd.DataFrame({"exports": quarterly["exports_q"].to_numpy(),
                           "imports": quarterly["imports_q"].to_numpy()}, index=index)
     return sales, trade
