@@ -121,6 +121,169 @@ the R package (annual sales 1975–2010; quarterly exports and imports 1972–20
 Federal Statistical Office and Federal Customs Administration). `load_denton1971()` is the
 textbook example of Denton (1971).
 
+## Input data: what to pass to the API
+
+`tempdisagg` is a **Python API**, not an HTTP service. Its inputs represent two
+frequencies:
+
+- **`y_low`**: the observed low-frequency target (for example, *one annual total per
+  year*). These are the values the estimated series must reproduce when aggregated.
+- **`indicators`**: one or more higher-frequency explanatory series (for example,
+  *four quarterly observations per year*). These guide the estimated path **within**
+  each year; they are **not** the values to be disaggregated.
+
+For example, an annual total of `200` for 2016 and four quarterly indicator
+observations mean: **estimate four quarterly target values whose sum is 200**
+(with the default `conversion="sum"`). Do not divide the annual total by four
+before passing it to the model.
+
+### Option 1 — Pandas with calendar dates (recommended)
+
+Pass a `pandas.Series` for `y_low` and a `pandas.Series` or `pandas.DataFrame`
+for `indicators`. Both must use unique, sorted **`PeriodIndex`** objects (or a
+`DatetimeIndex` whose frequency pandas can infer). The target and indicators
+have **different frequencies**; the calendar aligns them automatically.
+
+```python
+import numpy as np
+import pandas as pd
+import tempdisagg as td
+
+# Eight annual totals: one value per year.
+years = pd.period_range("2016", periods=8, freq="Y")
+y_low = pd.Series(
+    [200, 230, 260, 280, 315, 345, 380, 415],
+    index=years,
+    name="annual_total",
+)
+
+# Eight years of quarterly observations: 4 rows per year, 32 in total.
+quarters = pd.period_range("2016Q1", periods=32, freq="Q")
+indicators = pd.DataFrame(
+    {"activity": np.linspace(30, 110, 32)},
+    index=quarters,
+)
+
+result = td.TemporalDisaggregator("chow-lin-maxlog").fit(y_low, indicators)
+quarterly_estimates = result.values  # pd.Series indexed by quarter
+print(quarterly_estimates.head())
+
+# Verify that the quarterly estimates reproduce the annual totals.
+annual_check = quarterly_estimates.groupby(quarterly_estimates.index.asfreq("Y")).sum()
+assert np.allclose(annual_check.to_numpy(), y_low.to_numpy())
+```
+
+For **multiple indicators**, supply several columns in the same quarterly
+DataFrame (for example, `exports` and `employment`). A single indicator can
+also be passed as a `pd.Series`. The indicator's index defines the output
+frequency; `high_freq` is not needed in this case.
+
+If your original data come in CSV files, first construct the time indexes:
+
+```python
+import pandas as pd
+import tempdisagg as td
+
+annual_csv = pd.read_csv("annual.csv")       # columns: year, total
+quarterly_csv = pd.read_csv("quarterly.csv")  # year, quarter, exports, imports
+
+y_low = pd.Series(
+    annual_csv["total"].to_numpy(dtype=float),
+    index=pd.PeriodIndex(annual_csv["year"].astype(str), freq="Y"),
+)
+quarter_index = pd.PeriodIndex(
+    quarterly_csv["year"].astype(str) + "Q" + quarterly_csv["quarter"].astype(str),
+    freq="Q",
+)
+indicators = pd.DataFrame(
+    quarterly_csv[["exports", "imports"]].to_numpy(dtype=float),
+    index=quarter_index,
+    columns=["exports", "imports"],
+)
+quarterly_estimates = td.disaggregate(y_low, indicators, method="chow-lin-maxlog")
+```
+
+### Option 2 — NumPy arrays (no date index)
+
+Use `fit_arrays()` when the observations are already in chronological order
+and you know the fixed number of high-frequency periods per low-frequency
+period. A one-dimensional indicator is allowed; multiple indicators use a
+matrix with one column per indicator.
+
+```python
+result = td.TemporalDisaggregator("chow-lin-maxlog").fit_arrays(
+    y_low.to_numpy(),             # shape (8,): eight annual observations
+    indicators.to_numpy(),        # shape (32, 1): quarterly observations
+    frequency_ratio=4,            # four quarters per year
+)
+print(result.values.head())        # indexed by integer positions, not dates
+```
+
+For monthly-to-daily or other **calendar-variable** conversions, use the
+pandas interface rather than a fixed `frequency_ratio`.
+
+### Option 3 — Long DataFrame (compatible with 0.2.x)
+
+Use `fit_long_format()` if **each row is a high-frequency observation**.
+The default column names are `Index` (low-frequency group), `Grain`
+(subperiod), `y` (low-frequency target), and the indicator columns selected
+by `x_cols`. For annual-to-quarterly data, the layout is:
+
+| Index | Grain | y | activity |
+|---|---:|---:|---:|
+| 2016 | 1 | 200 | 30.0 |
+| 2016 | 2 | 200 | 32.6 |
+| 2016 | 3 | 200 | 35.2 |
+| 2016 | 4 | 200 | 37.7 |
+| 2017 | 1 | 230 | 40.3 |
+
+The `y` column contains the **annual total**, repeated in the four quarter
+rows (or supplied once with `NaN` in the other rows). Values within one
+`Index` group must be identical when provided; conflicting totals are
+rejected. The `y` column does **not** contain quarterly targets.
+
+```python
+frame = pd.DataFrame({
+    "Index": np.repeat(years.year, 4),
+    "Grain": np.tile([1, 2, 3, 4], len(years)),
+    "y": np.repeat(y_low.to_numpy(), 4),
+    "activity": indicators["activity"].to_numpy(),
+})
+result = td.TemporalDisaggregator("chow-lin-maxlog").fit_long_format(
+    frame, x_cols=["activity"]
+)
+print(result.values.head())  # indexed by (Index, Grain)
+```
+
+### Without an indicator
+
+Methods such as `uniform` and `denton-cholette` can run without explanatory
+series. **Specify `high_freq`** because the desired output frequency cannot
+be inferred:
+
+```python
+quarterly = td.disaggregate(y_low, method="denton-cholette", high_freq="Q")
+monthly = td.disaggregate(y_low, method="uniform", high_freq="M")
+```
+
+### Rules and common mistakes
+
+| Topic | Rule |
+|---|---|
+| `conversion` | Default `"sum"` reproduces totals; use `"average"`, `"first"`, or `"last"` when those definitions match the published target. |
+| Dates | Pandas indexes must be sorted, unique and have known frequencies. String/date columns must be converted to a time index first. |
+| Data types | Targets and indicators must be numeric; infinite values and duplicate period labels are rejected. |
+| Indicator collinearity | Avoid duplicate, proportional or otherwise linearly dependent indicators; regression methods reject singular aggregated designs. |
+| Missing target | `NaN` in `y_low` means that low-frequency period is **unconstrained**, not zero. |
+| Missing indicator | With default `completion=True`, missing indicator observations can be filled by the documented preprocessing rules and recorded in `result.preprocessing`. Set `completion=False` to reject incomplete inputs instead. |
+| API entry points | `td.disaggregate(...)` returns only a high-frequency `pd.Series`; `TemporalDisaggregator(...).fit(...)` returns a result with statistics and diagnostics. Arrays and long data use `fit_arrays()` and `fit_long_format()` respectively. |
+| Additional quarters | Indicator periods beyond the final observed annual target can be estimated, but have no annual total to constrain them. |
+
+See the [configuration guide](docs/configuration.md), [methodology](docs/methodology.md),
+and [example notebook](examples/tempdisagg_examples.ipynb) for the full options.
+
+
+
 ## Documentation
 
 | | |
