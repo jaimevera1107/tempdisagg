@@ -22,18 +22,6 @@ Turn annual or quarterly observations into a finer time series, while preserving
 </div>
 
 
-<h2 align="center">tempdisagg at a glance</h2>
-
-<p align="center">
-  <a href="./docs/images/Tempdisagg%20-%20Temporal%20Disaggregation%20Library%20Toolkit.png">
-    <img
-      src="./docs/images/Tempdisagg%20-%20Temporal%20Disaggregation%20Library%20Toolkit.png"
-      alt="tempdisagg — Temporal Disaggregation Library Toolkit"
-      width="90%"
-    />
-  </a>
-</p>
-
 
 
 ## Get started
