@@ -1,66 +1,135 @@
-<h1 align="center">tempdisagg</h1>
+<!--
+  tempdisagg — project README
+  Designed for GitHub's Markdown renderer. Detailed methodology remains in /docs.
+  Visual asset: docs/images/readme_banner.svg
+-->
+
+<div align="center">
+
+# tempdisagg
+
+**Temporal disaggregation of time series, in Python.**
+
+Turn annual or quarterly observations into a finer time series, while preserving the published benchmarks.
+
+[![PyPI](https://img.shields.io/pypi/v/tempdisagg?style=flat-square&label=PyPI&labelColor=15243B&color=29A88F)](https://pypi.org/project/tempdisagg/)
+![Python](https://img.shields.io/badge/Python-3.10%2B-15243B?style=flat-square&labelColor=15243B&color=44648E)
+[![License](https://img.shields.io/badge/License-MIT-15243B?style=flat-square&labelColor=15243B&color=44648E)](LICENSE)
+[![R reference](https://img.shields.io/badge/R%20reference-validated-15243B?style=flat-square&labelColor=15243B&color=29A88F)](#validation-against-r)
+
+[**Get started**](#get-started) · [**Explore methods**](#choose-a-method) · [**Use your data**](#bring-your-own-data) · [**Documentation**](#documentation)
+
+</div>
+
+
+<h2 align="center">tempdisagg at a glance</h2>
 
 <p align="center">
-  <b>Temporal disaggregation of time series in Python</b><br>
-  From annual to quarterly, monthly or daily — consistent with the totals, validated against R.
+  <a href="./docs/images/Tempdisagg%20-%20Temporal%20Disaggregation%20Library%20Toolkit.png">
+    <img
+      src="./docs/images/Tempdisagg%20-%20Temporal%20Disaggregation%20Library%20Toolkit.png"
+      alt="tempdisagg — Temporal Disaggregation Library Toolkit"
+      width="90%"
+    />
+  </a>
 </p>
 
-<p align="center">
-  <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-0b6e99">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-0b6e99">
-  <img alt="R parity" src="https://img.shields.io/badge/R%20parity-tempdisagg%201.2.0-d9822b">
-  <img alt="Status" src="https://img.shields.io/badge/status-beta%20(0.6.3)-7b8794">
-</p>
 
-<p align="center">
-  <img src="docs/images/hero.png" alt="Quarterly sales estimated from annual totals" width="88%">
-</p>
 
-Official statistics often exist only once a year while analysis needs quarters or months.
-`tempdisagg` estimates the high-frequency path from related indicators, and every result adds up
-exactly to the published figures. It implements the methods of the R package
-[`tempdisagg`](https://cran.r-project.org/package=tempdisagg) (Sax and Steiner, 2013) with the same
-names and defaults, reproduces its results to machine precision, and adds what production work
-usually needs: extra constraints, reconciliation of several series, backtesting and full
-diagnostics.
+## Get started
 
-## Installation
+**Install**
 
 ```bash
-pip install tempdisagg            # numpy, pandas, scipy
-pip install "tempdisagg[plot]"    # adds matplotlib for plotting
+pip install tempdisagg
 ```
 
-## Quick start
+Need charts? Install the optional plotting dependencies with `pip install "tempdisagg[plot]"`.
+
+**Your first estimate**
 
 ```python
 import tempdisagg as td
 from tempdisagg.datasets import load_swisspharma
 
-sales, trade = load_swisspharma()          # annual sales, quarterly exports and imports
+sales, trade = load_swisspharma()  # annual target, quarterly indicators
 
-result = td.TemporalDisaggregator("chow-lin-maxlog").fit(sales, trade[["exports"]])
-result.values                              # quarterly series
-print(result.summary())                    # coefficients, rho, R², log-likelihood
-result.prediction_interval(0.95)           # interval for each quarter
+result = td.TemporalDisaggregator("chow-lin-maxlog").fit(
+    sales, trade[["exports"]]
+)
 
-td.disaggregate(sales, method="denton-cholette", high_freq="Q")   # no indicator needed
+quarterly = result.values
+print(result.summary())
 ```
 
-## Methods
+You now have quarterly estimates and a fitted result with model statistics. You can also call `result.prediction_interval(0.95)`.
 
-| Method | Idea | Presets |
+**No indicator available?**
+
+```python
+quarterly = td.disaggregate(sales, method="denton-cholette", high_freq="Q")
+```
+
+<p align="center">
+  <img src="docs/images/hero.png" alt="Example of annual sales disaggregated to quarterly estimates" width="92%">
+</p>
+
+## What you can build
+
+| **Econometric disaggregation** | **Benchmark-aware workflows** |
+|:---|:---|
+| Chow–Lin, Litterman, Fernández, OLS, Denton and more. | Known values, aggregation constraints and reconciliation across series. |
+| **Model evaluation** | **Real-world data handling** |
+| Backtesting, diagnostics, coefficients and uncertainty estimates. | Incomplete periods, padding, non-negative reconciliation and series splicing. |
+
+<details>
+<summary><b>See the full feature map</b></summary>
+
+<br>
+
+| Need | API |
+|---|---|
+| Preserve known subperiods or other benchmark constraints | `td.known_values(...)`, `td.aggregate_constraints(...)` |
+| Reconcile several related series | `td.CrossSectionalReconciler` |
+| Disaggregate rates and shares | `td.disaggregate_ratio`, `aggregation_weights=` |
+| Compare methods and indicator sets | `td.backtest` |
+| Represent level shifts or isolated shocks | `td.level_shift`, `td.impulse` |
+| Handle incomplete periods or extrapolated ends | `td.CompletionSettings`, `td.PaddingSettings` |
+| Enforce non-negative results | `td.NonNegativeReconciler` |
+| Join series across methodological breaks | `td.SeriesSplicer` |
+
+Conflicting constraints are rejected; preprocessing choices and warnings are exposed rather than hidden.
+
+</details>
+
+## Choose a method
+
+Different models make different assumptions about how the high-frequency path behaves.
+
+| Family | When to consider it | Method |
 |---|---|---|
-| Chow-Lin | regression on the indicators, AR(1) residuals | `chow-lin-maxlog` (default), `chow-lin-minrss-ecotrim`, `chow-lin-minrss-quilis`, `chow-lin-fixed`, `fast` |
-| Litterman | random-walk residuals with AR(1) changes | `litterman-maxlog`, `litterman-minrss`, `litterman-fixed` |
-| Fernández | random-walk residuals | `fernandez` |
-| Dynamic Chow-Lin | the target depends on its own lag (experimental) | `dynamic-maxlog`, `dynamic-minrss`, `dynamic-fixed` |
-| OLS | regression without residual correlation | `ols` |
-| Denton | adjusts one indicator to the totals, additive or proportional | `denton-cholette`, `denton` |
-| Uniform | splits each total evenly | `uniform` |
+| **Chow–Lin** | Regression on indicators with AR(1) residuals | `chow-lin-maxlog` **(default)** |
+| **Litterman** | Regression with a more persistent error process | `litterman-maxlog` |
+| **Fernández** | Regression with random-walk residuals | `fernandez` |
+| **Denton / Denton–Cholette** | Match benchmarks while controlling movements | `denton`, `denton-cholette` |
+| **OLS** | Regression without serially correlated residuals | `ols` |
+| **Uniform** | Even distribution without an indicator | `uniform` |
+| **Dynamic Chow–Lin** | Include a lagged target term; experimental | `dynamic-maxlog` |
 
-Every method is configurable — intercept, rho criterion and bounds, truncation, Denton criterion and
-order — and `describe()` lists each setting with its R equivalent:
+<details>
+<summary><b>Show all method presets and configuration examples</b></summary>
+
+<br>
+
+| Family | Available presets |
+|---|---|
+| Chow–Lin | `chow-lin-maxlog`, `chow-lin-minrss-ecotrim`, `chow-lin-minrss-quilis`, `chow-lin-fixed`, `fast` |
+| Litterman | `litterman-maxlog`, `litterman-minrss`, `litterman-fixed` |
+| Fernández | `fernandez` |
+| Dynamic Chow–Lin | `dynamic-maxlog`, `dynamic-minrss`, `dynamic-fixed` |
+| OLS | `ols` |
+| Denton | `denton`, `denton-cholette` |
+| Uniform | `uniform` |
 
 ```python
 td.TemporalDisaggregator("fernandez", include_intercept=False)
@@ -68,166 +137,111 @@ td.TemporalDisaggregator("chow-lin-maxlog", truncated_rho=-1)
 td.TemporalDisaggregator("denton-cholette", criterion="additive", h=2)
 ```
 
-## Beyond a single series
+See [configuration](docs/configuration.md) for intercepts, rho bounds, Denton criteria and more.
 
-| Need | Tool |
-|---|---|
-| Some quarters or months are known from another source | `constraints=td.known_values(...)` / `td.aggregate_constraints(...)` |
-| Series that must add up to a total every period | `td.CrossSectionalReconciler` |
-| Rates and shares (not additive) | `td.disaggregate_ratio`, or `aggregation_weights=` |
-| Choosing between models and indicators | `td.backtest` |
-| Structural breaks | `td.level_shift`, `td.impulse` as extra indicators |
-| Incomplete years, padding of the ends | `td.CompletionSettings`, `td.PaddingSettings` |
-| Non-negative output | `td.NonNegativeReconciler` |
-| Methodological breaks between two versions of a series | `td.SeriesSplicer` |
+</details>
 
-Contradictory inputs are rejected with the values that clash; nothing is imputed silently; every
-artificial value and every warning is recorded in the result.
+## Validation against R
 
-## Validated against R
+The Python implementation is checked against the R [`tempdisagg`](https://cran.r-project.org/package=tempdisagg) reference package (Sax & Steiner, 2013).
 
-All 29 reference cases — every method, the four aggregation rules, with and without intercept,
-Denton orders 0–2 and the Denton (1971) example — were run in R 4.5.3 with tempdisagg 1.2.0.
-Predictions, coefficients, standard errors and every reported statistic agree to between 1e-13
-and 3e-9. When rho is estimated, R's optimiser stops near 1e-4; the Python optimum is never worse
-on the estimation criterion, and refitting at R's rho restores agreement to 1e-13.
+| **29** reference cases | **4** aggregation rules | **R 1.2.0** reference package |
+|:---:|:---:|:---:|
+| Multiple methods, options and edge cases | Sum, average, first and last | Reproducible reference fixtures |
 
 <p align="center">
-  <img src="docs/images/r_parity_series.png" alt="Python vs R estimates" width="92%">
+  <img src="docs/images/r_parity_series.png" alt="Comparison of Python and R disaggregated time series" width="90%">
 </p>
+
+<details>
+<summary><b>See numerical agreement and reproducibility details</b></summary>
+
+<br>
+
+Reported predictions, coefficients, standard errors and statistics agree to approximately `1e-13`–`3e-9` for the comparable reference settings. Optimized rho values may differ slightly because the numerical optimizers stop at different points; refitting at R's rho recovers approximately `1e-13` agreement.
 
 <p align="center">
-  <img src="docs/images/r_parity_summary.png" alt="Agreement with R per case" width="62%">
+  <img src="docs/images/r_parity_summary.png" alt="Summary of numerical differences between Python and R" width="86%">
 </p>
 
-The reference files are committed in `tests/reference/`, so the comparison runs with every
-`pytest`. To regenerate them: `Rscript tests/reference/generate_r_reference.R`.
+The reference data are committed under `tests/reference/` and checked with `pytest`. To regenerate:
 
-## Examples and data
-
-[`examples/tempdisagg_examples.ipynb`](examples/tempdisagg_examples.ipynb) goes through every method
-with real data: Chow-Lin and its variants, Denton with and without an indicator, a test against
-known quarters, backtesting, known values as constraints, reconciliation of exports and imports,
-rates, incomplete years and padding.
-
-The data ship with the package:
-
-```python
-from tempdisagg.datasets import load_swisspharma, load_denton1971
+```bash
+Rscript tests/reference/generate_r_reference.R
 ```
 
-`load_swisspharma()` returns the Swiss chemical and pharmaceutical industry data distributed with
-the R package (annual sales 1975–2010; quarterly exports and imports 1972–2011; sources: Swiss
-Federal Statistical Office and Federal Customs Administration). `load_denton1971()` is the
-textbook example of Denton (1971).
+</details>
 
-## Input data: what to pass to the API
+## Bring your own data
 
-`tempdisagg` is a **Python API**, not an HTTP service. Its inputs represent two
-frequencies:
+You provide two ingredients: **`y_low`**, the observed low-frequency series, and **`indicators`**, optional high-frequency signals. The output is an estimated series at the finer frequency.
 
-- **`y_low`**: the observed low-frequency target (for example, *one annual total per
-  year*). These are the values the estimated series must reproduce when aggregated.
-- **`indicators`**: one or more higher-frequency explanatory series (for example,
-  *four quarterly observations per year*). These guide the estimated path **within**
-  each year; they are **not** the values to be disaggregated.
+| Input | Example | Role |
+|---|---|---|
+| `y_low` | Annual sales: `200` in 2016 | Benchmark that must be reproduced |
+| `indicators` | Quarterly exports or activity | Guides how the `200` is allocated |
+| `result.values` | Four quarterly estimates | They add up to `200` with `conversion="sum"` |
 
-For example, an annual total of `200` for 2016 and four quarterly indicator
-observations mean: **estimate four quarterly target values whose sum is 200**
-(with the default `conversion="sum"`). Do not divide the annual total by four
-before passing it to the model.
+**Recommended:** a `pandas.Series` with annual `PeriodIndex` for `y_low`, and a quarterly `Series` or `DataFrame` with `PeriodIndex` for indicators.
 
-### Option 1 — Pandas with calendar dates (recommended)
+<details>
+<summary><b>Example A — Pandas with calendar dates</b> · recommended</summary>
 
-Pass a `pandas.Series` for `y_low` and a `pandas.Series` or `pandas.DataFrame`
-for `indicators`. Both must use unique, sorted **`PeriodIndex`** objects (or a
-`DatetimeIndex` whose frequency pandas can infer). The target and indicators
-have **different frequencies**; the calendar aligns them automatically.
+<br>
 
 ```python
 import numpy as np
 import pandas as pd
 import tempdisagg as td
 
-# Eight annual totals: one value per year.
 years = pd.period_range("2016", periods=8, freq="Y")
+quarters = pd.period_range("2016Q1", periods=32, freq="Q")
+
 y_low = pd.Series(
     [200, 230, 260, 280, 315, 345, 380, 415],
     index=years,
-    name="annual_total",
 )
-
-# Eight years of quarterly observations: 4 rows per year, 32 in total.
-quarters = pd.period_range("2016Q1", periods=32, freq="Q")
 indicators = pd.DataFrame(
     {"activity": np.linspace(30, 110, 32)},
     index=quarters,
 )
 
 result = td.TemporalDisaggregator("chow-lin-maxlog").fit(y_low, indicators)
-quarterly_estimates = result.values  # pd.Series indexed by quarter
-print(quarterly_estimates.head())
+estimates = result.values
 
-# Verify that the quarterly estimates reproduce the annual totals.
-annual_check = quarterly_estimates.groupby(quarterly_estimates.index.asfreq("Y")).sum()
+annual_check = estimates.groupby(estimates.index.asfreq("Y")).sum()
 assert np.allclose(annual_check.to_numpy(), y_low.to_numpy())
 ```
 
-For **multiple indicators**, supply several columns in the same quarterly
-DataFrame (for example, `exports` and `employment`). A single indicator can
-also be passed as a `pd.Series`. The indicator's index defines the output
-frequency; `high_freq` is not needed in this case.
+Use multiple columns for multiple indicators. `DatetimeIndex` also works when pandas can infer a frequency.
 
-If your original data come in CSV files, first construct the time indexes:
+</details>
 
-```python
-import pandas as pd
-import tempdisagg as td
+<details>
+<summary><b>Example B — NumPy arrays</b> · fixed frequency ratio</summary>
 
-annual_csv = pd.read_csv("annual.csv")       # columns: year, total
-quarterly_csv = pd.read_csv("quarterly.csv")  # year, quarter, exports, imports
+<br>
 
-y_low = pd.Series(
-    annual_csv["total"].to_numpy(dtype=float),
-    index=pd.PeriodIndex(annual_csv["year"].astype(str), freq="Y"),
-)
-quarter_index = pd.PeriodIndex(
-    quarterly_csv["year"].astype(str) + "Q" + quarterly_csv["quarter"].astype(str),
-    freq="Q",
-)
-indicators = pd.DataFrame(
-    quarterly_csv[["exports", "imports"]].to_numpy(dtype=float),
-    index=quarter_index,
-    columns=["exports", "imports"],
-)
-quarterly_estimates = td.disaggregate(y_low, indicators, method="chow-lin-maxlog")
-```
-
-### Option 2 — NumPy arrays (no date index)
-
-Use `fit_arrays()` when the observations are already in chronological order
-and you know the fixed number of high-frequency periods per low-frequency
-period. A one-dimensional indicator is allowed; multiple indicators use a
-matrix with one column per indicator.
+If your observations are already ordered chronologically:
 
 ```python
 result = td.TemporalDisaggregator("chow-lin-maxlog").fit_arrays(
-    y_low.to_numpy(),             # shape (8,): eight annual observations
-    indicators.to_numpy(),        # shape (32, 1): quarterly observations
-    frequency_ratio=4,            # four quarters per year
+    y_low.to_numpy(),
+    indicators.to_numpy(),
+    frequency_ratio=4,
 )
-print(result.values.head())        # indexed by integer positions, not dates
 ```
 
-For monthly-to-daily or other **calendar-variable** conversions, use the
-pandas interface rather than a fixed `frequency_ratio`.
+`frequency_ratio=4` means four quarterly values per annual observation. For calendar-variable conversions such as month to day, prefer pandas indexes.
 
-### Option 3 — Long DataFrame (compatible with 0.2.x)
+</details>
 
-Use `fit_long_format()` if **each row is a high-frequency observation**.
-The default column names are `Index` (low-frequency group), `Grain`
-(subperiod), `y` (low-frequency target), and the indicator columns selected
-by `x_cols`. For annual-to-quarterly data, the layout is:
+<details>
+<summary><b>Example C — Long DataFrame</b> · legacy-compatible format</summary>
+
+<br>
+
+Each row is a high-frequency period; the annual target is repeated across its quarters.
 
 | Index | Grain | y | activity |
 |---|---:|---:|---:|
@@ -235,12 +249,6 @@ by `x_cols`. For annual-to-quarterly data, the layout is:
 | 2016 | 2 | 200 | 32.6 |
 | 2016 | 3 | 200 | 35.2 |
 | 2016 | 4 | 200 | 37.7 |
-| 2017 | 1 | 230 | 40.3 |
-
-The `y` column contains the **annual total**, repeated in the four quarter
-rows (or supplied once with `NaN` in the other rows). Values within one
-`Index` group must be identical when provided; conflicting totals are
-rejected. The `y` column does **not** contain quarterly targets.
 
 ```python
 frame = pd.DataFrame({
@@ -249,53 +257,55 @@ frame = pd.DataFrame({
     "y": np.repeat(y_low.to_numpy(), 4),
     "activity": indicators["activity"].to_numpy(),
 })
+
 result = td.TemporalDisaggregator("chow-lin-maxlog").fit_long_format(
     frame, x_cols=["activity"]
 )
-print(result.values.head())  # indexed by (Index, Grain)
 ```
 
-### Without an indicator
+The `y` field represents the **annual** target, not the quarterly values. Inconsistent targets within one annual group are rejected.
 
-Methods such as `uniform` and `denton-cholette` can run without explanatory
-series. **Specify `high_freq`** because the desired output frequency cannot
-be inferred:
+</details>
 
-```python
-quarterly = td.disaggregate(y_low, method="denton-cholette", high_freq="Q")
-monthly = td.disaggregate(y_low, method="uniform", high_freq="M")
-```
+<details>
+<summary><b>Data rules and common pitfalls</b></summary>
 
-### Rules and common mistakes
+<br>
 
-| Topic | Rule |
+| Topic | What matters |
 |---|---|
-| `conversion` | Default `"sum"` reproduces totals; use `"average"`, `"first"`, or `"last"` when those definitions match the published target. |
-| Dates | Pandas indexes must be sorted, unique and have known frequencies. String/date columns must be converted to a time index first. |
-| Data types | Targets and indicators must be numeric; infinite values and duplicate period labels are rejected. |
-| Indicator collinearity | Avoid duplicate, proportional or otherwise linearly dependent indicators; regression methods reject singular aggregated designs. |
-| Missing target | `NaN` in `y_low` means that low-frequency period is **unconstrained**, not zero. |
-| Missing indicator | With default `completion=True`, missing indicator observations can be filled by the documented preprocessing rules and recorded in `result.preprocessing`. Set `completion=False` to reject incomplete inputs instead. |
-| API entry points | `td.disaggregate(...)` returns only a high-frequency `pd.Series`; `TemporalDisaggregator(...).fit(...)` returns a result with statistics and diagnostics. Arrays and long data use `fit_arrays()` and `fit_long_format()` respectively. |
-| Additional quarters | Indicator periods beyond the final observed annual target can be estimated, but have no annual total to constrain them. |
+| Aggregation | `conversion="sum"` is the default. Also supports `"average"`, `"first"`, `"last"`. |
+| Dates | Time indexes must be unique, sorted and have an identifiable frequency. |
+| Values | Targets and indicators must be numeric; non-finite or duplicated entries are validated. |
+| Multicollinearity | Regression methods require an identifiable aggregated indicator design. |
+| Missing target | `NaN` in `y_low` means unconstrained, not zero. |
+| Missing indicators | With `completion=True` (default), documented completion rules may fill missing values and record them in `result.preprocessing`. Use `completion=False` to reject them. |
+| Unconstrained extensions | Indicators beyond the last observed target can generate estimates, but these future periods have no observed benchmark. |
+| Output types | `td.disaggregate(...)` returns a `pd.Series`; `TemporalDisaggregator(...).fit(...)` returns a result with diagnostics. |
 
-See the [configuration guide](docs/configuration.md), [methodology](docs/methodology.md),
-and [example notebook](examples/tempdisagg_examples.ipynb) for the full options.
+Read the [configuration guide](docs/configuration.md) for detailed input and model options.
 
-
+</details>
 
 ## Documentation
 
-| | |
+| Learn | Go to |
 |---|---|
-| [Methodology](docs/methodology.md) | formulas and derivations of every method |
-| [Statistics](docs/statistics.md) | every number in a result, and its R equivalent |
-| [Configuration](docs/configuration.md) | settings of each method |
-| [Architecture](docs/architecture.md) | how the code is organised |
-| [Testing](docs/testing.md) | what each test guarantees |
-| [Migration](MIGRATION.md) | changes from 0.2.x |
+| **End-to-end examples** | [Example notebook](examples/tempdisagg_examples.ipynb) |
+| **Statistical methods** | [Methodology and equations](docs/methodology.md) |
+| **Model outputs** | [Statistics and diagnostics](docs/statistics.md) |
+| **API settings** | [Configuration](docs/configuration.md) |
+| **Under the hood** | [Architecture](docs/architecture.md) · [Testing](docs/testing.md) |
+| **Upgrading** | [Migration guide](MIGRATION.md) · [Changelog](CHANGELOG.md) |
 
-## Citation
+Bundled datasets include `load_swisspharma()` (Swiss industry annual sales and quarterly foreign trade indicators) and `load_denton1971()` (Denton's textbook example).
+
+<details>
+<summary><b>Citation</b></summary>
+
+<br>
+
+If this package supports your research, you can cite:
 
 ```bibtex
 @misc{verajaramillo2025tempdisagg,
@@ -308,9 +318,18 @@ and [example notebook](examples/tempdisagg_examples.ipynb) for the full options.
 }
 ```
 
-Please also cite Sax and Steiner (2013), *Temporal Disaggregation of Time Series*,
-The R Journal 5(2), 80–88, for the methods and the reference implementation.
+For the underlying methods and R reference implementation, also cite Sax and Steiner (2013), *Temporal Disaggregation of Time Series*, **The R Journal**, 5(2), 80–88.
 
-## License
+</details>
 
-MIT. The swisspharma data come from the R package tempdisagg and Swiss official statistics.
+---
+
+<div align="center">
+
+**Open source under the [MIT License](LICENSE).**
+
+Built and maintained by [Jaime Vera-Jaramillo](https://github.com/jaimevera1107) · [Report an issue](https://github.com/jaimevera1107/tempdisagg/issues)
+
+<sub>The `swisspharma` dataset originates from the R package and Swiss official statistics.</sub>
+
+</div>
