@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tempdisagg"
-version = "0.6.2"
+version = "0.6.3"
 description = "Temporal disaggregation of time series: Chow-Lin, Fernandez, Litterman, Denton and more"
 readme = "README.md"
 authors = [{ name = "Jaime Vera-Jaramillo", email = "jaimevera1107@gmail.com" }]

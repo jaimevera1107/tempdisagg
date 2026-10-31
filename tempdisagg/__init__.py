@@ -61,7 +61,7 @@ from tempdisagg.reconciliation.non_negative import NonNegativeReconciler
 from tempdisagg.results import DisaggregationResult
 from tempdisagg.splicing.series_splicer import SeriesSplicer, SplicingMethod, SplicingResult
 
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 __all__ = [
     "OLS",
