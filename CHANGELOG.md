@@ -3,6 +3,13 @@
 Versioning: the library stays below 1.0 until it is complete and validated
 against R. Every major change increases the minor version by 0.1.
 
+## 0.6.3 — 2026-10-31
+
+### Changed
+- Synchronize the PyPI distribution with the latest validated GitHub source.
+- Incorporate code quality, linting and documentation refinements.
+- Preserve the statistical methods and public API introduced in v0.6.2.
+
 ## 0.6.2 — 2026-10-31
 
 Documentation release.

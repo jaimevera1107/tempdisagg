@@ -9,7 +9,7 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-0b6e99">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-0b6e99">
   <img alt="R parity" src="https://img.shields.io/badge/R%20parity-tempdisagg%201.2.0-d9822b">
-  <img alt="Status" src="https://img.shields.io/badge/status-beta%20(0.6.2)-7b8794">
+  <img alt="Status" src="https://img.shields.io/badge/status-beta%20(0.6.3)-7b8794">
 </p>
 
 <p align="center">
