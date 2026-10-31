@@ -1,0 +1,168 @@
+# .github/workflows/publish.yml
+# Source of truth: GitHub main + immutable version tag.
+# A normal push never publishes to PyPI.
+name: publish-to-pypi
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-release:
+    name: Check tag, version and main ancestry
+    if: ${{ !github.event.release.prerelease && !github.event.release.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact version agreement
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python - <<'PY'
+          import ast
+          import os
+          import pathlib
+          import re
+          import tomllib
+
+          tag = os.environ['RELEASE_TAG']
+          if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', tag):
+              raise SystemExit(f'Invalid release tag: {tag!r}; expected vX.Y.Z')
+
+          version = tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version']
+          root = ast.parse(pathlib.Path('tempdisagg/__init__.py').read_text(encoding='utf-8'))
+          declared = None
+          for node in root.body:
+              if isinstance(node, ast.Assign) and any(
+                  isinstance(t, ast.Name) and t.id == '__version__' for t in node.targets
+              ):
+                  declared = ast.literal_eval(node.value)
+          if version != tag[1:] or declared != version:
+              raise SystemExit(
+                  f'Version mismatch: release={tag!r}, pyproject={version!r}, __version__={declared!r}'
+              )
+          print(f'Version verified: {tag} ({version})')
+          PY
+      - name: Require release commit to be reachable from main
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main || {
+            echo 'Release tag must point to a commit on main.' >&2
+            exit 1
+          }
+
+  test-python:
+    name: Release tests / Python ${{ matrix.python-version }}
+    needs: verify-release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install development dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Ruff
+        run: python -m ruff check tempdisagg tests
+      - name: Test suite
+        run: python -m pytest -q
+
+  test-r-parity:
+    name: Release test / R reference parity
+    needs: verify-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: Install R tempdisagg
+        run: Rscript -e 'install.packages("tempdisagg", repos = "https://cloud.r-project.org")'
+      - name: Generate R references
+        run: Rscript tests/reference/generate_r_reference.R
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install development dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Require R parity tests
+        env:
+          TEMPDISAGG_REQUIRE_R_REFERENCE: '1'
+        run: python -m pytest tests/test_r_parity.py -v
+
+  build:
+    name: Build and verify distributions
+    needs: [verify-release, test-python, test-r-parity]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install packaging tools
+        run: python -m pip install --upgrade build twine
+      - name: Build from tagged source
+        run: python -m build
+      - name: Check package metadata
+        run: python -m twine check dist/*
+      - name: Check distribution filenames
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          version = os.environ['RELEASE_TAG'][1:]
+          expected = {
+              f'tempdisagg-{version}.tar.gz',
+              f'tempdisagg-{version}-py3-none-any.whl',
+          }
+          actual = {p.name for p in Path('dist').iterdir()}
+          if actual != expected:
+              raise SystemExit(f'Unexpected distributions: {actual!r} != {expected!r}')
+          print('Distributions verified:', ', '.join(sorted(actual)))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-dists
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish tagged distributions to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/tempdisagg/
+    permissions:
+      id-token: write
+    steps:
+      - name: Download verified build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
+      - name: Publish using PyPI Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
