@@ -1,9 +1,16 @@
-from .rho_optimizer import RhoOptimizer
-from .numeric_utils import NumericUtils
-from .temporal_aggregator import TemporalAggregator
+"""Core building blocks: aggregation, data alignment and linear algebra."""
+
+from tempdisagg.core.aggregation import (
+    Conversion,
+    build_aggregation_matrix,
+    temporal_aggregate,
+)
+from tempdisagg.core.data import DataAligner, DisaggregationData
 
 __all__ = [
-    "RhoOptimizer",
-    "NumericUtils",
-    "TemporalAggregator"
+    "Conversion",
+    "DataAligner",
+    "DisaggregationData",
+    "build_aggregation_matrix",
+    "temporal_aggregate",
 ]

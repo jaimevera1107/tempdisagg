@@ -1,11 +1,10 @@
-from .disagg_input_preparer import DisaggInputPreparer
-from .input_preprocessor import InputPreprocessor
-from .timeseries_completer import TimeSeriesCompleter
-from .conversion_matrix_builder import ConversionMatrixBuilder
+"""Preprocessing: completion of the time grid and optional padding."""
 
-__all__ = [
-    "DisaggInputPreparer",
-    "InputPreprocessor",
-    "TimeSeriesCompleter",
-    "ConversionMatrixBuilder"
-]
+from tempdisagg.preprocessing.settings import (
+    CompletionSettings,
+    EdgeMethod,
+    PaddingSettings,
+    TargetPaddingMethod,
+)
+
+__all__ = ["CompletionSettings", "EdgeMethod", "PaddingSettings", "TargetPaddingMethod"]
