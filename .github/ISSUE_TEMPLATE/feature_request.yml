@@ -1,0 +1,64 @@
+name: Feature or method proposal
+description: Propose a statistical method, API improvement, performance change, or documented workflow.
+title: "[Proposal] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New features should have a **clear use case and validation strategy**. If proposing a statistical method, please include methodological references rather than only an implementation idea.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Proposal category
+      options:
+        - Statistical or econometric method
+        - Constraint, benchmarking, or reconciliation
+        - Data input, frequency, or preprocessing
+        - Numerical robustness or performance
+        - Public API or result diagnostics
+        - Documentation or examples
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What concrete use case is not supported or is unnecessarily difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed behavior or API
+      description: Describe the result you want; include a short Python usage sketch if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Statistical assumptions and references
+      description: For method proposals, include equations, papers, textbooks, reference implementations, or links; for other proposals, explain the design rationale.
+    validations:
+      required: false
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation and acceptance criteria
+      description: How can correctness be demonstrated (benchmark conservation, objective function, comparison to R, numerical tolerance, edge cases, or performance baseline)?
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and alternatives
+      description: Would this change the default behavior, public API, dependencies, or existing results? Are there workarounds today?
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and documentation for similar functionality.
+          required: true
