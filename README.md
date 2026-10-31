@@ -8,6 +8,20 @@
 
 # tempdisagg
 
+<p align="center">
+  <a href="./docs/images/Tempdisagg Temporal Series Logo.png">
+    <img
+      src="./docs/images/Tempdisagg Temporal Series Logo.png"
+      alt="tempdisagg logo"
+      width="320"
+    />
+  </a>
+</p>
+
+<p align="center">
+  <sub><sup><em>Logo generated with ChatGPT (OpenAI).</em></sup></sub>
+</p>
+
 **Temporal disaggregation of time series, in Python.**
 
 Turn annual or quarterly observations into a finer time series, while preserving the published benchmarks.
