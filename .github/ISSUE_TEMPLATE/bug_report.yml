@@ -1,0 +1,78 @@
+name: Bug report
+description: Report an incorrect result, numerical discrepancy, API problem, or installation failure.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please use a **small reproducible example**, preferably with synthetic data.
+        For suspected security vulnerabilities, follow [SECURITY.md](https://github.com/jaimevera1107/tempdisagg/blob/main/SECURITY.md) instead of opening a public issue.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Type of problem
+      options:
+        - Statistical or numerical discrepancy
+        - Benchmark / aggregation / other constraint violation
+        - Input data, dates, alignment, or preprocessing
+        - API or configuration behavior
+        - Installation or dependency problem
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproducible example
+      description: Include a small dataset and runnable Python code. Identify the model, conversion, frequency, and settings when applicable.
+      placeholder: |
+        import pandas as pd
+        import tempdisagg as td
+
+        # Minimal inputs and the call that reproduces the issue
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: Include the numerical output, diagnostic warning, or traceback (remove sensitive data).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result and why
+      description: State the expected behavior or numerical invariant; include formulas, references, or R comparisons if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Specify tempdisagg version, Python version, operating system, and relevant dependency versions.
+      placeholder: |
+        tempdisagg:
+        Python:
+        OS:
+        numpy / pandas / scipy (if relevant):
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Other relevant details
+      description: For numerical issues, include constraint residuals, objective values, reference implementation, or result diagnostics if available.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: I removed credentials, personal data, and confidential datasets from this report.
+          required: true
