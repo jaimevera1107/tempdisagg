@@ -1,307 +1,153 @@
-# ⚡️ **tempdisagg**
+<h1 align="center">tempdisagg</h1>
 
->### **Temporal Disaggregation Models in Python**
+<p align="center">
+  <b>Temporal disaggregation of time series in Python</b><br>
+  From annual to quarterly, monthly or daily — consistent with the totals, validated against R.
+</p>
 
-*High-Frequency Estimation from Low-Frequency Data — Modular · Robust · Ready for Production*
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-0b6e99">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-0b6e99">
+  <img alt="R parity" src="https://img.shields.io/badge/R%20parity-tempdisagg%201.2.0-d9822b">
+  <img alt="Status" src="https://img.shields.io/badge/status-beta%20(0.6.2)-7b8794">
+</p>
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
-![Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Coverage](https://img.shields.io/badge/tests-100%25-success)
-![PyPI](https://img.shields.io/pypi/v/tempdisagg)
+<p align="center">
+  <img src="docs/images/hero.png" alt="Quarterly sales estimated from annual totals" width="88%">
+</p>
 
----
+Official statistics often exist only once a year while analysis needs quarters or months.
+`tempdisagg` estimates the high-frequency path from related indicators, and every result adds up
+exactly to the published figures. It implements the methods of the R package
+[`tempdisagg`](https://cran.r-project.org/package=tempdisagg) (Sax and Steiner, 2013) with the same
+names and defaults, reproduces its results to machine precision, and adds what production work
+usually needs: extra constraints, reconciliation of several series, backtesting and full
+diagnostics.
 
-`tempdisagg` is a production-ready Python library for **temporal disaggregation of time series** — transforming low-frequency data into high-frequency estimates while preserving consistency.
-
-> It supports all major classical methods — **Chow-Lin**, **Litterman**, **Denton**, **Fernández**, **Uniform** — and provides a **clean modular architecture** inspired by R's `tempdisagg`, with modern additions:
-
-- 📈 Regression + autoregressive adjustment  
-- 📉 Differencing & smoothing interpolators  
-- 🤖 Ensemble prediction engine  
-- 🧠 Intelligent padding & interpolation  
-- 🔧 Post-estimation fix for negative values  
-- 🔄 Optional retropolarization via regression    
-
----
-
-## 🔍 Why Temporal Disaggregation?
-
-Official indicators often come in low frequency (e.g. yearly GDP), while economic analysis or forecasting needs monthly or quarterly granularity. `tempdisagg` fills this gap using consistent econometric techniques to create **granular estimates** that **respect original aggregates**.
-
----
-
-## 📚 Methods Implemented
-
-| Method(s)                                                               | Description                                                   |
-|-------------------------------------------------------------------------|---------------------------------------------------------------|
-| `ols`                                                                   | Ordinary Least Squares (baseline)                             |
-| `denton`                                                                | Denton interpolation with differencing                        |
-| `denton-cholette`                                                       | Cholette smoother variant from Dagum & Cholette               |
-| `chow-lin`, `chow-lin-opt`, `chow-lin-ecotrim`, `chow-lin-quilis`       | Regression + AR(1) residual modeling                          |
-| `litterman`, `litterman-opt`                                            | Random walk / AR(1) prior models                              |
-| `fernandez`                                                             | Fixed-ρ Litterman (ρ = 0)                                     |
-| `fast`                                                                  | Fast approximation of Denton-Cholette                         |
-| `uniform`                                                               | Even distribution across subperiods                           |
-
----
-
-## 💾 Installation
+## Installation
 
 ```bash
-pip install tempdisagg
+pip install tempdisagg            # numpy, pandas, scipy
+pip install "tempdisagg[plot]"    # adds matplotlib for plotting
 ```
 
----
-
-## 🚀 Quick Example
+## Quick start
 
 ```python
-from tempdisagg import TempDisaggModel
-import pandas as pd
-import numpy as np
+import tempdisagg as td
+from tempdisagg.datasets import load_swisspharma
 
-# Sample input data (monthly disaggregation of yearly total)
-df = pd.DataFrame({
-    "Index": [2020]*12 + [2021]*12,
-    "Grain": list(range(1, 13)) * 2,
-    "y": [1200] + [np.nan]*11 + [1500] + [np.nan]*11,
-    "X": np.linspace(100, 200, 24)
-})
+sales, trade = load_swisspharma()          # annual sales, quarterly exports and imports
 
-# Fit model
-model = TempDisaggModel(method="chow-lin-opt", conversion="sum")
-model.fit(df)
+result = td.TemporalDisaggregator("chow-lin-maxlog").fit(sales, trade[["exports"]])
+result.values                              # quarterly series
+print(result.summary())                    # coefficients, rho, R², log-likelihood
+result.prediction_interval(0.95)           # interval for each quarter
 
-# Predict high-frequency series
-y_hat = model.predict()
+td.disaggregate(sales, method="denton-cholette", high_freq="Q")   # no indicator needed
+```
 
-# Adjust negatives (if any; OPTIONAL)
-y_adj = model.adjust_output()
+## Methods
 
-# Show results
-model.summary()
-model.plot()
-````
+| Method | Idea | Presets |
+|---|---|---|
+| Chow-Lin | regression on the indicators, AR(1) residuals | `chow-lin-maxlog` (default), `chow-lin-minrss-ecotrim`, `chow-lin-minrss-quilis`, `chow-lin-fixed`, `fast` |
+| Litterman | random-walk residuals with AR(1) changes | `litterman-maxlog`, `litterman-minrss`, `litterman-fixed` |
+| Fernández | random-walk residuals | `fernandez` |
+| Dynamic Chow-Lin | the target depends on its own lag (experimental) | `dynamic-maxlog`, `dynamic-minrss`, `dynamic-fixed` |
+| OLS | regression without residual correlation | `ols` |
+| Denton | adjusts one indicator to the totals, additive or proportional | `denton-cholette`, `denton` |
+| Uniform | splits each total evenly | `uniform` |
 
----
-
-## ⚡ Example with Real Data
+Every method is configurable — intercept, rho criterion and bounds, truncation, Denton criterion and
+order — and `describe()` lists each setting with its R equivalent:
 
 ```python
-import statsmodels.api as sm
-from tempdisagg import TempDisaggModel
-
-# Load macroeconomic dataset (quarterly)
-macro = sm.datasets.macrodata.load_pandas().data
-macro["Index"] = macro["year"].astype(int)
-macro["Grain"] = macro["quarter"].astype(int)
-macro["X"] = macro["realcons"]
-
-# Aggregate GDP to annual level
-gdp_annual = macro.groupby("Index")["realgdp"].mean().reset_index()
-gdp_annual.columns = ["Index", "y"]
-
-# Merge back into full frame
-df = macro.merge(gdp_annual, on="Index", how="left")[["Index", "Grain", "y", "X"]]
-
-# Fit model and predict
-model = TempDisaggModel(method="chow-lin-opt", conversion="average")
-model.fit(df)
-
-# Get high-frequency estimates
-y_hat = model.predict(full=False)
-
-# Optional: post-estimation adjustment
-y_adj = model.adjust_output(full=False)
-
-# Summary and plot
-model.summary()
-model.plot()
+td.TemporalDisaggregator("fernandez", include_intercept=False)
+td.TemporalDisaggregator("chow-lin-maxlog", truncated_rho=-1)
+td.TemporalDisaggregator("denton-cholette", criterion="additive", h=2)
 ```
 
----
+## Beyond a single series
 
-## 🤖 Ensemble Prediction
+| Need | Tool |
+|---|---|
+| Some quarters or months are known from another source | `constraints=td.known_values(...)` / `td.aggregate_constraints(...)` |
+| Series that must add up to a total every period | `td.CrossSectionalReconciler` |
+| Rates and shares (not additive) | `td.disaggregate_ratio`, or `aggregation_weights=` |
+| Choosing between models and indicators | `td.backtest` |
+| Structural breaks | `td.level_shift`, `td.impulse` as extra indicators |
+| Incomplete years, padding of the ends | `td.CompletionSettings`, `td.PaddingSettings` |
+| Non-negative output | `td.NonNegativeReconciler` |
+| Methodological breaks between two versions of a series | `td.SeriesSplicer` |
 
-Run all models and let the library **find the optimal weighted combination**.
+Contradictory inputs are rejected with the values that clash; nothing is imputed silently; every
+artificial value and every warning is recorded in the result.
+
+## Validated against R
+
+All 29 reference cases — every method, the four aggregation rules, with and without intercept,
+Denton orders 0–2 and the Denton (1971) example — were run in R 4.5.3 with tempdisagg 1.2.0.
+Predictions, coefficients, standard errors and every reported statistic agree to between 1e-13
+and 3e-9. When rho is estimated, R's optimiser stops near 1e-4; the Python optimum is never worse
+on the estimation criterion, and refitting at R's rho restores agreement to 1e-13.
+
+<p align="center">
+  <img src="docs/images/r_parity_series.png" alt="Python vs R estimates" width="92%">
+</p>
+
+<p align="center">
+  <img src="docs/images/r_parity_summary.png" alt="Agreement with R per case" width="62%">
+</p>
+
+The reference files are committed in `tests/reference/`, so the comparison runs with every
+`pytest`. To regenerate them: `Rscript tests/reference/generate_r_reference.R`.
+
+## Examples and data
+
+[`examples/tempdisagg_examples.ipynb`](examples/tempdisagg_examples.ipynb) goes through every method
+with real data: Chow-Lin and its variants, Denton with and without an indicator, a test against
+known quarters, backtesting, known values as constraints, reconciliation of exports and imports,
+rates, incomplete years and padding.
+
+The data ship with the package:
 
 ```python
-model = TempDisaggModel(method="ensemble", conversion="sum")
-model.fit(df)
-
-model.summary()
-model.plot()
+from tempdisagg.datasets import load_swisspharma, load_denton1971
 ```
 
-Behind the scenes:
-- Each method is fitted separately.
-- Error metrics (e.g. MAE) are computed.
-- Weights are optimized to minimize global error.
-- Final prediction is a weighted average across models.
+`load_swisspharma()` returns the Swiss chemical and pharmaceutical industry data distributed with
+the R package (annual sales 1975–2010; quarterly exports and imports 1972–2011; sources: Swiss
+Federal Statistical Office and Federal Customs Administration). `load_denton1971()` is the
+textbook example of Denton (1971).
 
----
+## Documentation
 
-## 🚫 Negative Value Adjustment
+| | |
+|---|---|
+| [Methodology](docs/methodology.md) | formulas and derivations of every method |
+| [Statistics](docs/statistics.md) | every number in a result, and its R equivalent |
+| [Configuration](docs/configuration.md) | settings of each method |
+| [Architecture](docs/architecture.md) | how the code is organised |
+| [Testing](docs/testing.md) | what each test guarantees |
+| [Migration](MIGRATION.md) | changes from 0.2.x |
 
-When disaggregation outputs negatives (due to smoothing or regression noise), `tempdisagg` can correct them **without violating consistency**.
-
-```python
-model.fit(df)
-y_hat = model.adjust_output()
-```
-
-Internally:
-- Detects negatives in each group.
-- Redistributes values proportionally.
-- Ensures aggregate values match original data.
-
----
-
-## 🧠 Retropolarizer: Smart Interpolation
-
-For missing values in the target (`y`), you can activate the **Retropolarizer**: a module that imputes via regression, proportions, or exponential smoothing.
-
-```python
-from tempdisagg import Retropolarizer
-retro = Retropolarizer(df = data, new_col = "new", old_col = "old")
-df["y_imputed"] = retro.retropolarize(method='proportion')
-```
-
-Or use it inside any model:
-
-```python
-model = TempDisaggModel(
-    method="chow-lin",
-    use_retropolarizer=True,
-    retro_method="linear_regression"
-)
-model.fit(df)
-```
-
-Available methods:
-
-- 'proportion'
-- 'linear_regression'
-- 'polynomial_regression' 
-- 'exponential_smoothing'
-- 'mlp_regression'
-
-> **Note:** The Retropolarizer is only used to impute missing values in the `y` column.  It is **not** intended for interpolating the `X` (indicator) variable.
-
-
----
-
-## 📘 Input Format
-
-Your data must be in long format:
-
-| Column   | Meaning                                        |
-|----------|------------------------------------------------|
-| `Index`  | Low-frequency group ID (e.g., year)            |
-| `Grain`  | High-frequency unit (e.g., month number)       |
-| `y`      | Target variable (repeated within group)        |
-| `X`      | Indicator variable at high frequency           |
-
-```text
-Index | Grain | y     | X
-------|-------|-------|-----
-2020  | 1     | 1000  | 10.1
-2020  | 2     | 1000  | 11.3
-2020  | 3     | 1000  | 12.5
-...   | ...   | ...   | ...
-```
-
----
-
-## 🧩 Modular Design
-
-| Component              | Role                                       |
-|------------------------|--------------------------------------------|
-| `TempDisaggModel`      | High-level interface                       |
-| `DisaggInputPreparer`  | Input validation + padding + interpolation |
-| `ModelsHandler`        | Implements disaggregation methods          |
-| `RhoOptimizer`         | Optimizes AR(1) parameter                  |
-| `PostEstimation`       | Adjusts negative values                    |
-| `EnsemblePrediction`   | Combines multiple models                   |
-| `Retropolarizer`       | Regression-based imputer for `y`           |
-
----
-
-## 🧪 Testing & Reliability
-
-- ✅ Full test coverage  
-- ✅ Input validation & fallbacks  
-- ✅ Padding & missing data supported  
-- ✅ Consistency validation `C @ y_hat ≈ y_l`  
-
----
-
-## 🔍 API Overview
-
-| Method                         | Description                                         |
-|--------------------------------|-----------------------------------------------------|
-| `.fit(df)`                     | Fit the model                                       |
-| `.predict(full=True)`          | Predict disaggregated values                        |
-| `.adjust_output(full=True)`    | Fix negative predictions                            |
-| `.summary(metric="mae")`       | Print coefficients, rho, and errors                 |
-| `.plot(use_adjusted=False)`    | Visualize predictions                               |
-| `.get_params()` / `.set_params()` | Get/set model config                            |
-| `.to_dict()`                   | Export results                                      |
-
----
-
-## 📦 Dependencies
-
-`tempdisagg` relies on the following Python libraries:
-
-- `pandas` – data manipulation  
-- `numpy` – numerical operations  
-- `matplotlib` – plotting  
-- `scipy` and `statsmodels` – regression and optimization  
-- `scikit-learn` – used in `Retropolarizer` (e.g., MLP imputation)
-
-> These packages are automatically installed with `pip install tempdisagg`.
-
----
-
-## 📄 Cite this work
-
-
-This project is accompanied by a scientific publication available on **arXiv**:
-
-> Jaime A. Jaramillo-Vera. (2025). *tempdisagg: A Python Library for Temporal Disaggregation of Time Series*. arXiv:2503.22054 [econ.EM].  
-> [🔗 View on arXiv](https://arxiv.org/abs/2503.22054)
-
-If you use this library in your research, please cite the paper to support the development and visibility of the project.
+## Citation
 
 ```bibtex
 @misc{verajaramillo2025tempdisagg,
-  title        = {tempdisagg: A Python Library for Temporal Disaggregation of Time Series},
-  author       = {Jaime A. Jaramillo-Vera},
-  year         = {2025},
-  eprint       = {2503.22054},
+  title         = {tempdisagg: A Python Library for Temporal Disaggregation of Time Series},
+  author        = {Jaime A. Vera-Jaramillo},
+  year          = {2025},
+  eprint        = {2503.22054},
   archivePrefix = {arXiv},
-  primaryClass = {econ.EM},
-  url          = {https://arxiv.org/abs/2503.22054}
+  primaryClass  = {econ.EM}
 }
 ```
----
 
-## 📚 References
+Please also cite Sax and Steiner (2013), *Temporal Disaggregation of Time Series*,
+The R Journal 5(2), 80–88, for the methods and the reference implementation.
 
-- Dagum & Cholette (2006), *Benchmarking, Temporal Distribution, and Reconciliation Methods*  
-- Denton (1971), *Adjustment of Monthly or Quarterly Series*  
-- Chow & Lin (1971), *Best Linear Unbiased Estimation of Missing Observations*  
-- Fernández (1981), *Methodological Note on a Monthly Indicator*  
-- Litterman (1983), *A Random Walk, Markov Model for Forecasting*
-- tempdisagg (R package)
+## License
 
----
-
-## 📃 License
-
-MIT License — See [LICENSE](./LICENSE) for details.
-
-
-Developed and maintained by Jaime Vera-Jaramillo — Contributions are welcome ❤️.
+MIT. The swisspharma data come from the R package tempdisagg and Swiss official statistics.
