@@ -266,3 +266,26 @@ def test_partial_first_conversion_needs_the_first_subperiod() -> None:
                                   completion=CompletionSettings(partial_periods="partial"))
     with pytest.raises(InputValidationError, match="first sub-period"):
         _quiet(model.fit, first, indicators.iloc[1:])
+
+
+@pytest.mark.parametrize("freq", ["QS", "MS"])
+def test_start_anchored_datetime_index_is_accepted(freq):
+    """``pd.date_range(freq="QS")`` and friends must convert to periods.
+
+    ``DatetimeIndex.to_period(offset)`` fails for start-anchored offsets
+    because they have no period dtype; the aligner must not pass them on.
+    """
+    import numpy as np
+    import pandas as pd
+
+    from tempdisagg import TemporalDisaggregator
+
+    periods = {"QS": 24, "MS": 72}[freq]
+    index = pd.date_range("1990-01-01", periods=periods, freq=freq)
+    indicator = pd.DataFrame({"x": np.linspace(100.0, 200.0, periods)}, index=index)
+    target = pd.Series(
+        np.linspace(1000.0, 1500.0, 6), index=pd.period_range("1990", periods=6, freq="Y")
+    )
+    result = TemporalDisaggregator("ols").fit(target, indicator)
+    assert len(result.values) == periods
+    assert result.values.index.freqstr.startswith({"QS": "Q", "MS": "M"}[freq])

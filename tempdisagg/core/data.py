@@ -149,7 +149,10 @@ def _to_period_index(index: pd.Index, label: str) -> pd.PeriodIndex:
             raise InputValidationError(
                 f"Cannot infer the frequency of {label}; use a PeriodIndex."
             )
-        period_index = index.to_period(freq)
+        # ``to_period()`` without an explicit frequency maps start-anchored
+        # offsets ("QS", "MS", "YS") to their period frequency; passing the
+        # offset itself fails for them (no period dtype code).
+        period_index = pd.DatetimeIndex(index, freq=freq).to_period()
     else:
         raise InputValidationError(f"{label} must have a PeriodIndex or DatetimeIndex.")
     if not period_index.is_unique or not period_index.is_monotonic_increasing:
