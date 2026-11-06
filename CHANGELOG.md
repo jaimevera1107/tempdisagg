@@ -3,6 +3,21 @@
 Versioning: the library stays below 1.0 until it is complete and validated
 against R. Every major change increases the minor version by 0.1.
 
+## Unreleased
+
+### Fixed
+- `DatetimeIndex` inputs with start-anchored frequencies (`pd.date_range(freq="QS")`,
+  `"MS"`, `"YS"`) raised `AttributeError` inside pandas; they are now converted
+  through `to_period()` after fixing the index frequency.
+- `tempdisagg.datasets` used a two-argument `Traversable.joinpath`, which only
+  exists on Python 3.12+ for zipped packages.
+
+### Changed
+- The package type-checks cleanly (`mypy tempdisagg`) and `ruff check .` covers
+  the whole repository; both run in CI. The package already shipped `py.typed`.
+- README rewritten around the workflow: fit, read a result, choose a method,
+  constraints and reconciliation, backtesting, R validation.
+
 ## 0.6.3 — 2026-10-31
 
 ### Changed
