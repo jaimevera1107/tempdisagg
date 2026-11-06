@@ -5,6 +5,8 @@ against R. Every major change increases the minor version by 0.1.
 
 ## Unreleased
 
+## Unreleased
+
 ## 0.6.4 — 2026-11-06
 
 ### Fixed
@@ -19,6 +21,12 @@ against R. Every major change increases the minor version by 0.1.
   the whole repository; both run in CI. The package already shipped `py.typed`.
 - README rewritten around the workflow: fit, read a result, choose a method,
   constraints and reconciliation, backtesting, R validation.
+- `scripts/release.ps1` releases in one command: bump, CHANGELOG section,
+  reinstall, tests, lint, types, checklist, commit, push, wait for CI, and
+  create the GitHub Release. It stops at the first failure and resumes on
+  re-run; `-DryRun` checks everything without committing. Approving the
+  `pypi` environment stays manual, because a published version can never be
+  replaced.
 - Release tooling: the version lives only in `tempdisagg/_version.py`
   (`pyproject.toml` reads it dynamically); `tools/bump_version.py`,
   `tools/check_release.py`, `scripts/publish_release.ps1` and

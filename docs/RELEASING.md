@@ -21,44 +21,41 @@ Setting up the workflow does **not** republish 0.6.2. Only a **new, non-prerelea
 
 ## How to publish a new version
 
-The version lives in **one** place, `tempdisagg/_version.py`; `pyproject.toml`
-reads it dynamically and `tempdisagg.__version__` re-exports it.
+One command does everything that can be automated:
 
-1. Merge the work into `main` through pull requests, with CI green.
-2. On `main`, set the new version and describe it:
+```powershell
+.\scripts\release.ps1 0.6.5
+```
 
-   ```powershell
-   python tools/bump_version.py 0.6.5
-   # rename "## Unreleased" in CHANGELOG.md to "## 0.6.5 — YYYY-MM-DD" and start a new empty "## Unreleased"
-   python tools/check_release.py          # PASS, Version: 0.6.5
-   git commit -am "release: 0.6.5"
-   git push origin main
-   ```
+It bumps the version in `tempdisagg/_version.py`, opens the `CHANGELOG.md`
+section for it, reinstalls the package, runs pytest, ruff and mypy plus
+`tools/check_release.py`, commits, pushes, waits for the `tests` workflow on
+that exact commit, asks you to type `PUBLISH`, and creates the tag and the
+GitHub Release that triggers `publish.yml`.
 
-3. Wait until the `tests` workflow is green on that commit (`gh run watch`).
-4. Create the release from the local checkout:
+It stops at the first failure and does nothing further; every step is
+skipped when already done, so after fixing a problem you run the same
+command again and it resumes. `-DryRun` runs every check and stops before
+committing; `-SkipTests` skips the local suite.
 
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\scripts\publish_release.ps1
-   ```
+`publish.yml` then verifies tag and version, requires the commit to be on
+`main`, runs the Python matrix and the R parity tests, builds the
+distributions, and waits for approval of the `pypi` environment under
+**Actions → publish-to-pypi → Review deployments**. That approval stays
+manual because PyPI never allows a version to be replaced or reused.
 
-   The script re-runs the checklist, requires a clean tree synchronised with
-   `origin/main`, an unused tag and a successful CI run for the exact commit,
-   then asks you to type `PUBLISH`. It creates the tag `v0.6.5` and the GitHub
-   Release, which triggers `publish.yml`.
-5. `publish.yml` verifies tag and version, requires the commit to be on
-   `main`, runs the Python matrix with ruff, mypy and the suite, regenerates
-   the R references and runs the parity tests, builds the distributions and
-   then waits for approval of the `pypi` environment. Approve it under
-   **Actions → publish-to-pypi → Review deployments**.
-6. Verify from a fresh environment:
+Confirm the upload with:
 
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\scripts\verify_pypi.ps1
-   ```
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\verify_pypi.ps1
+```
 
-Never reuse a tag or a version: PyPI refuses replacement files. For a
-correction, release the next patch version.
+### Doing it by hand
+
+`scripts/publish_release.ps1` performs only the tag-and-release part, for
+when the version and the changelog are already committed and pushed. The
+individual tools (`tools/bump_version.py`, `tools/open_changelog_section.py`,
+`tools/check_release.py`) can also be run on their own.
 
 ### Before the first automated release
 

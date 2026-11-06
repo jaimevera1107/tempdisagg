@@ -24,6 +24,7 @@ REQUIRED_FILES = (
     "tests/reference/generate_r_reference.R",
     ".github/workflows/tests.yml",
     ".github/workflows/publish.yml",
+    "scripts/release.ps1",
     "scripts/publish_release.ps1",
     "scripts/verify_pypi.ps1",
 )
