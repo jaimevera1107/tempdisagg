@@ -341,7 +341,7 @@ class DisaggregationResult:
         frame.insert(0, "estimate", self.values.to_numpy())
         if self.prediction_se is not None:
             frame.insert(1, "std_error", self.prediction_se.to_numpy())
-        frame["constrained"] = self.data.aggregation_matrix.any(axis=0)[real]
+        frame["constrained"] = np.asarray(self.data.aggregation_matrix.any(axis=0))[real]
         frame["indicator_filled"] = self.data.completed_indicators[real].any(axis=1) \
             if self.data.has_indicators else False
         return frame

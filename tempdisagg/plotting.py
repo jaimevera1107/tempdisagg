@@ -27,7 +27,9 @@ def plot_result(result: DisaggregationResult, **figure_kwargs: Any) -> Figure:
     figure, (top, bottom) = plt.subplots(2, 1, sharex=False, **figure_kwargs)
     values = result.values
     positions = np.arange(len(values))
-    constrained = result.data.aggregation_matrix.any(axis=0)[~result.data.artificial_high]
+    constrained = np.asarray(result.data.aggregation_matrix.any(axis=0))[
+        ~result.data.artificial_high
+    ]
 
     top.plot(positions, values.to_numpy(), color="C0", label="estimate")
     if result.prediction_se is not None:
