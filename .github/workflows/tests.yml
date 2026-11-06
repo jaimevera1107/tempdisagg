@@ -19,6 +19,8 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: Lint (PEP 8, docstrings, imports)
-        run: ruff check tempdisagg tests
+        run: ruff check .
+      - name: Type check (the package ships py.typed)
+        run: mypy tempdisagg
       - name: Test-suite
         run: pytest -q

@@ -34,6 +34,11 @@ class RowKind(str, Enum):
     CONSTRAINT = "constraint"  # additional user constraint
 
 
+def _unset() -> np.ndarray:
+    """Return the placeholder that means "derive the default in ``__post_init__``"."""
+    return np.empty(0, dtype=bool)
+
+
 @dataclass(frozen=True)
 class DisaggregationData:
     """Validated inputs for one temporal disaggregation problem.
@@ -69,10 +74,10 @@ class DisaggregationData:
     low_index: pd.Index
     indicator_names: tuple[str, ...]
     conversion: Conversion
-    artificial_low: np.ndarray = field(default=None, repr=False)  # type: ignore[assignment]
-    artificial_high: np.ndarray = field(default=None, repr=False)  # type: ignore[assignment]
-    completed_indicators: np.ndarray = field(default=None, repr=False)  # type: ignore[assignment]
-    row_kind: np.ndarray = field(default=None, repr=False)  # type: ignore[assignment]
+    artificial_low: np.ndarray = field(default_factory=_unset, repr=False)
+    artificial_high: np.ndarray = field(default_factory=_unset, repr=False)
+    completed_indicators: np.ndarray = field(default_factory=_unset, repr=False)
+    row_kind: np.ndarray = field(default_factory=_unset, repr=False)
 
     def __post_init__(self) -> None:
         n_low, n_high = self.aggregation_matrix.shape
@@ -83,7 +88,7 @@ class DisaggregationData:
             "row_kind": np.full(n_low, RowKind.TARGET.value),
         }
         for name, default in defaults.items():
-            if getattr(self, name) is None:
+            if getattr(self, name).size == 0:
                 object.__setattr__(self, name, default)
         if self.y_low.shape != (n_low,):
             raise InputValidationError("y_low does not match the aggregation matrix rows.")

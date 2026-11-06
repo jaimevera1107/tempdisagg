@@ -30,7 +30,7 @@ dependencies = [
 
 [project.optional-dependencies]
 plot = ["matplotlib>=3.5"]
-dev = ["pytest>=7", "ruff>=0.4", "matplotlib>=3.5"]
+dev = ["pytest>=7", "ruff>=0.4", "mypy>=1.10", "matplotlib>=3.5"]
 
 [project.urls]
 Homepage = "https://github.com/jaimevera1107/tempdisagg"
@@ -50,6 +50,8 @@ filterwarnings = ["ignore::DeprecationWarning:tests.test_legacy"]
 [tool.ruff]
 line-length = 99
 target-version = "py310"
+# The notebook is maintained by hand and rendered, not imported.
+extend-exclude = ["examples/*.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "D"]
@@ -60,3 +62,11 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]
+# Scripts and notebooks: docstrings are not an API contract there.
+"docs/*" = ["D"]
+"examples/*" = ["D"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true

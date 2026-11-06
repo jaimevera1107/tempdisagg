@@ -70,14 +70,14 @@ class TempDisaggModel:
         self.grain_col: str = grain_col
         self.index_col: str = index_col
         self.y_col: str = y_col
-        self.X_col: str = X_col
+        self.X_col: str | None = X_col
         self.result_: DisaggregationResult | None = None
         self._adjusted: pd.Series | None = None
 
     def fit(self, df: pd.DataFrame) -> TempDisaggModel:
         """Fit on the 0.2.x long format."""
         spec = make_method(self.method)
-        fields = {f.name for f in dataclasses.fields(spec)}
+        fields = {f.name for f in dataclasses.fields(spec)}  # type: ignore[arg-type]
         overrides: dict[str, Any] = {}
         if "include_intercept" in fields:
             overrides["include_intercept"] = False  # 0.2.x had no intercept

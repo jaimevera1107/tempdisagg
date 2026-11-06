@@ -78,8 +78,10 @@ def fit_case(case_id: str, rho: float | None = None):
 
 def r_values(case_id: str) -> pd.Series:
     frame = pd.read_csv(REFERENCE / f"r_{case_id}.csv")
-    index = pd.PeriodIndex([pd.Period(year=int(y), quarter=int(q), freq="Q")
-                            for y, q in zip(frame["year"], frame["quarter"])])
+    index = pd.PeriodIndex([
+        pd.Period(year=int(y), quarter=int(q), freq="Q")
+        for y, q in zip(frame["year"], frame["quarter"], strict=True)
+    ])
     return pd.Series(frame["value"].to_numpy(), index=index)
 
 
@@ -184,7 +186,7 @@ def parity_series() -> None:
              ("dc_prop", "Denton-Cholette, proportional"),
              ("dc_noind", "Denton-Cholette, no indicator")]
     fig, axes = plt.subplots(2, 3, figsize=(11, 5.4), sharex=True)
-    for ax, (case_id, title) in zip(axes.ravel(), cases):
+    for ax, (case_id, title) in zip(axes.ravel(), cases, strict=True):
         expected = r_values(case_id)
         result = fit_case(case_id).values.reindex(expected.index)
         diff = float(np.max(np.abs(result / expected - 1)))  # over the whole output

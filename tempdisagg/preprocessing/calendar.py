@@ -20,7 +20,7 @@ GrainCalendar      (index, grain) pairs        ``fit_long_format``
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 import pandas as pd
@@ -37,10 +37,10 @@ class Calendar(Protocol):
     def parents(self, high: pd.Index) -> pd.Index:
         """Low-frequency label of each high-frequency label."""
 
-    def shift(self, low: object, steps: int) -> object:
+    def shift(self, low: Any, steps: int) -> Any:
         """Low-frequency label ``steps`` periods after ``low``."""
 
-    def low_range(self, first: object, last: object) -> pd.Index:
+    def low_range(self, first: Any, last: Any) -> pd.Index:
         """Every low-frequency label from ``first`` to ``last``."""
 
     def high_index(self, labels: Sequence[object]) -> pd.Index:
@@ -117,7 +117,7 @@ class GrainCalendar:
     observed). Shifting and gap filling require integer low labels (years).
     """
 
-    def __init__(self, grains: Sequence[object], low_labels: pd.Index) -> None:
+    def __init__(self, grains: Sequence[Any], low_labels: pd.Index) -> None:
         self.grains = tuple(sorted(set(grains)))
         if len(self.grains) < 2:
             raise InputValidationError("At least two distinct grains are required.")
@@ -132,13 +132,13 @@ class GrainCalendar:
         """Extract the low-frequency parents of a multi-level index."""
         return pd.Index(high.get_level_values(0))
 
-    def shift(self, low: object, steps: int) -> object:
+    def shift(self, low: Any, steps: int) -> Any:
         """Shift a numeric low-frequency label by the given number of steps."""
         if not self.numeric:
             raise InputValidationError("Padding requires integer low-frequency labels.")
         return int(low) + steps
 
-    def low_range(self, first: object, last: object) -> pd.Index:
+    def low_range(self, first: Any, last: Any) -> pd.Index:
         """Return the available low-frequency labels between the given endpoints."""
         if not self.numeric:
             return self._labels[(self._labels >= first) & (self._labels <= last)]

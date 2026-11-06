@@ -280,7 +280,8 @@ class GridBuilder:
         n_parents = max(1, len(set(self.calendar.parents(grid))))
         group_size = max(1, int(round(len(grid) / n_parents)))
         filled = np.column_stack([
-            fill_missing(raw[:, j], method, window * group_size) for j in range(raw.shape[1])
+            fill_missing(raw[:, j], EdgeMethod(method), window * group_size)
+            for j in range(raw.shape[1])
         ])
         return filled, missing
 

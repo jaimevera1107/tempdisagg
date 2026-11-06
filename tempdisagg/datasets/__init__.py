@@ -27,7 +27,8 @@ _PACKAGE = "tempdisagg.datasets"
 
 
 def _read(name: str) -> pd.DataFrame:
-    with resources.files(_PACKAGE).joinpath("data", name).open("r", encoding="utf-8") as handle:
+    resource = resources.files(_PACKAGE).joinpath("data").joinpath(name)
+    with resource.open("r", encoding="utf-8") as handle:
         return pd.read_csv(handle)
 
 

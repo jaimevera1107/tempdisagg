@@ -91,6 +91,9 @@ class MethodSpec(Protocol):
     def build(self) -> Disaggregator:
         """Instantiate the estimator."""
 
+    def describe(self) -> pd.DataFrame:
+        """Return every setting as a table."""
+
 
 class _SpecMixin:
     """Shared helpers for method specifications (no state)."""
@@ -189,7 +192,7 @@ class ChowLin(_SpecMixin):
         # rho is estimated with the chosen form; statistics are reported with the
         # stationary covariance rho^|i-j| / (1 - rho^2), as in the R package.
         return RegressionDisaggregator(
-            AR1Covariance(self.covariance_form), self.rho_method, self.fixed_rho,
+            AR1Covariance(self.covariance_form), RhoMethod(self.rho_method), self.fixed_rho,
             self.truncated_rho, self.include_intercept, self.optimizer,
             reporting_structure=AR1Covariance(CovarianceForm.COVARIANCE),
         )
@@ -221,12 +224,12 @@ class Litterman(_SpecMixin):
     @property
     def name(self) -> str:
         """Canonical R-compatible name."""
-        return f"litterman-{self.rho_method.value}"
+        return f"litterman-{RhoMethod(self.rho_method).value}"
 
     def build(self) -> Disaggregator:
         """Instantiate the GLS estimator."""
         return RegressionDisaggregator(
-            RandomWalkAR1Covariance(), self.rho_method, self.fixed_rho,
+            RandomWalkAR1Covariance(), RhoMethod(self.rho_method), self.fixed_rho,
             self.truncated_rho, self.include_intercept, self.optimizer,
         )
 
@@ -286,12 +289,12 @@ class DynamicChowLin(_SpecMixin):
     @property
     def name(self) -> str:
         """Canonical R-compatible name."""
-        return f"dynamic-{self.rho_method.value}"
+        return f"dynamic-{RhoMethod(self.rho_method).value}"
 
     def build(self) -> Disaggregator:
         """Instantiate the GLS estimator."""
         return RegressionDisaggregator(
-            DynamicStructure(self.include_truncation_remainder), self.rho_method,
+            DynamicStructure(self.include_truncation_remainder), RhoMethod(self.rho_method),
             self.fixed_rho, self.truncated_rho, self.include_intercept, self.optimizer,
         )
 
