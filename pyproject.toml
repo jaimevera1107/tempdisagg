@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tempdisagg"
-version = "0.6.3"
+dynamic = ["version"]
 description = "Temporal disaggregation of time series: Chow-Lin, Fernandez, Litterman, Denton and more"
 readme = "README.md"
 authors = [{ name = "Jaime Vera-Jaramillo", email = "jaimevera1107@gmail.com" }]
@@ -35,6 +35,9 @@ dev = ["pytest>=7", "ruff>=0.4", "mypy>=1.10", "matplotlib>=3.5"]
 [project.urls]
 Homepage = "https://github.com/jaimevera1107/tempdisagg"
 Issues = "https://github.com/jaimevera1107/tempdisagg/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "tempdisagg._version.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["."]

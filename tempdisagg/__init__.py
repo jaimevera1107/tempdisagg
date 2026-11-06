@@ -13,6 +13,7 @@ Quick use::
         y_annual, indicators)                                    # analysis
 """
 
+from tempdisagg._version import __version__ as __version__
 from tempdisagg.core.aggregation import Conversion, temporal_aggregate
 from tempdisagg.core.constraints import LinearConstraint, aggregate_constraints, known_values
 from tempdisagg.core.data import DataAligner, DisaggregationData
@@ -60,8 +61,6 @@ from tempdisagg.reconciliation.cross_section import (
 from tempdisagg.reconciliation.non_negative import NonNegativeReconciler
 from tempdisagg.results import DisaggregationResult
 from tempdisagg.splicing.series_splicer import SeriesSplicer, SplicingMethod, SplicingResult
-
-__version__ = "0.6.3"
 
 __all__ = [
     "OLS",

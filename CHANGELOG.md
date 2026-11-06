@@ -5,6 +5,8 @@ against R. Every major change increases the minor version by 0.1.
 
 ## Unreleased
 
+## 0.6.4 — 2026-11-06
+
 ### Fixed
 - `DatetimeIndex` inputs with start-anchored frequencies (`pd.date_range(freq="QS")`,
   `"MS"`, `"YS"`) raised `AttributeError` inside pandas; they are now converted
@@ -17,6 +19,10 @@ against R. Every major change increases the minor version by 0.1.
   the whole repository; both run in CI. The package already shipped `py.typed`.
 - README rewritten around the workflow: fit, read a result, choose a method,
   constraints and reconciliation, backtesting, R validation.
+- Release tooling: the version lives only in `tempdisagg/_version.py`
+  (`pyproject.toml` reads it dynamically); `tools/bump_version.py`,
+  `tools/check_release.py`, `scripts/publish_release.ps1` and
+  `scripts/verify_pypi.ps1` drive the release from a local checkout.
 
 ## 0.6.3 — 2026-10-31
 
