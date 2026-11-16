@@ -5,7 +5,31 @@ against R. Every major change increases the minor version by 0.1.
 
 ## Unreleased
 
-## Unreleased
+### Added
+- `Proietti` method (`proietti-maxlog`, `-minrss`, `-fixed`): the ADL(1,1)
+  model of Proietti (2006), `y_t = ρ y_{t-1} + x_t'β₀ + x_{t-1}'β₁ + e_t`,
+  which nests Chow-Lin under the common-factor restriction `β₁ = −ρ β₀`.
+  Experimental; it is not in the R package, so it is validated against a dense
+  textbook implementation instead (`tests/test_proietti.py`).
+- `common_factor_test(result)`: Wald test of `β₁ = −ρ β₀` on a Proietti fit,
+  reported as `F(q, n_l − k)` conditional on `ρ̂`. Monte Carlo size close to
+  the nominal 5 %, power 1.0 against ADL alternatives.
+- `conformity(result)`: Quilis (2018) Table 4 diagnostics — correlation in
+  levels and changes between estimate and indicators, standard deviation of
+  changes and volatility ratio.
+- `revision_analysis(y_low, candidates, n_vintages)`: Quilis (2018) Table 5
+  real-time revisions, re-estimating as each low-frequency period arrives, in
+  levels (% of the previous vintage) and in changes; `extrapolation=True`
+  measures the revision of the first estimate made with the indicator only.
+- `plot_rho_profile(result)`: the profile of the estimation criterion in `ρ`,
+  with the optimum, the truncation value and competing optima.
+- Padding `target_method="ratio"` and `"ratio_linear"`: artificial targets
+  equal the aggregated indicator times the projected benchmark-to-indicator
+  ratio (IMF Quarterly National Accounts Manual, ch. 6), instead of a trend of
+  the targets.
+
+### Changed
+- `ExperimentalMethodWarning` states per method why it is experimental.
 
 ## 0.6.4 — 2026-11-06
 

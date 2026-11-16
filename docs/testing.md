@@ -20,6 +20,8 @@ TEMPDISAGG_REQUIRE_R_REFERENCE=1 pytest tests/test_r_parity.py
 | `test_preprocessing.py` | completion of sub-periods, gaps and indicator values; targets never invented; padding rules and removal; unconstrained padding has no in-sample effect; methods without indicators |
 | `test_constraints.py` | mixed-frequency and known-value constraints hold exactly for every method; one-step GLS equals the textbook formula with stacked `C`; contradictions and redundancies; weighted rates; general non-negative projection vs a reference solver |
 | `test_evaluation.py` | backtest ranking and manual refit equivalence; ratio of sums preserved; level-shift dummies; cross-sectional reconciliation (both constraint sets, minimality, inconsistent totals, partial totals) |
+| `test_proietti.py` | ADL(1,1) engine = dense reference for several ρ and conversions; lag naming; parameter recovery; size and power of the common-factor test |
+| `test_diagnostics.py` | conformity against manual computations; revision analysis equals manual refits per vintage, extrapolation mode, retropolation exclusion; ρ profile plot; BI-ratio padding targets |
 | `test_reconciliation.py`, `test_splicing.py`, `test_legacy.py` | utilities and backward compatibility |
 
 **Randomised contract.** `test_random_inputs_respect_the_contract` draws random

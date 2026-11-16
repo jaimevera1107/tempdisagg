@@ -167,7 +167,10 @@ class RegressionDisaggregator:
         prediction = transformed @ fit.coefficients
         v_inverse_residuals = cho_solve((fit.cholesky_factor, True), fit.residuals)
         values = prediction + factor.apply(weights.T @ v_inverse_residuals)
-        if transformed.shape[1] > len(names):
+        namer = getattr(self.reporting_structure, "transformed_names", None)
+        if namer is not None:
+            names = namer(names, regressors, final_rho, transformed.shape[1])
+        elif transformed.shape[1] > len(names):
             names = (*names, TRUNCATION_REMAINDER_NAME)
 
         self._check_conditioning(fit, log)

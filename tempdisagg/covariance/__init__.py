@@ -2,6 +2,7 @@
 
 from tempdisagg.covariance.factors import LowerTriangularFactor
 from tempdisagg.covariance.structures import (
+    ADLStructure,
     AR1Covariance,
     CovarianceForm,
     DynamicStructure,
@@ -13,6 +14,7 @@ from tempdisagg.covariance.structures import (
 __all__ = [
     "AR1Covariance",
     "CovarianceForm",
+    "ADLStructure",
     "DynamicStructure",
     "LowerTriangularFactor",
     "RandomWalkAR1Covariance",

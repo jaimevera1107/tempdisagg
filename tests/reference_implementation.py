@@ -73,3 +73,22 @@ def denton(y_l: np.ndarray, x: np.ndarray, c: np.ndarray, h: int,
     n_l = c.shape[0]
     kkt = np.block([[a, c.T], [c, np.zeros((n_l, n_l))]])
     return np.linalg.solve(kkt, np.concatenate([a @ x, y_l]))[:n]
+
+
+def adl_design(x: np.ndarray, rho: float, remainder: bool = True) -> tuple[np.ndarray,
+                                                                         np.ndarray]:
+    """Dense ADL(1,1) design of Proietti (2006) and its residual covariance.
+
+    ``x`` holds the regressors (constant first, if any). Non-constant columns
+    are lagged, with the unobserved ``x_0`` backcast as ``x_1``. Returns
+    ``(Z, Sigma)`` with ``Z = H^{-1} [x, L x, rho^t]`` and
+    ``Sigma = H^{-1} H^{-T}``, ``H = I - rho L``.
+    """
+    n = x.shape[0]
+    varying = [j for j in range(x.shape[1]) if np.ptp(x[:, j]) > 0]
+    lagged = np.vstack([x[:1, varying], x[:-1, varying]])
+    h_inverse = np.linalg.inv(np.eye(n) - rho * lag(n))
+    columns = [h_inverse @ np.hstack([x, lagged])]
+    if remainder and rho != 0.0:
+        columns.append((rho ** np.arange(1, n + 1)).reshape(-1, 1))
+    return np.hstack(columns), h_inverse @ h_inverse.T

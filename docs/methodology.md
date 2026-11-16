@@ -68,7 +68,21 @@ low-frequency periods before the first and after the last observed target,
 with indicators extended (`indicator_method`) and artificial targets
 (`target_method`: `"linear"` trend of the last `fit_window` targets,
 `"repeat"` the edge target — the behaviour of 0.2.x, whose completer
-forward/backward-filled the target — or `"none"`).
+forward/backward-filled the target — `"ratio"`, `"ratio_linear"` or `"none"`).
+
+**Benchmark-to-indicator ratio.** With `"ratio"` the artificial target of a
+padded period whose indicator is observed is `r̂ · C_l x`, where `r_l = y_l /
+C_l x` is the benchmark-to-indicator (BI) ratio of each observed period and
+`r̂` its projection: the ratio of the edge period (`"ratio"`) or a linear trend
+of the last `fit_window` ratios (`"ratio_linear"`). This is the extrapolation
+recommended by the IMF Quarterly National Accounts Manual (Bloem et al., 2001,
+ch. 6): the indicator carries the movement and only the ratio, which is
+usually more stable than the level, is projected. Projecting a trend of the
+ratio is riskier and the manual warns against it. Requires exactly one
+indicator. The choice is data dependent: extrapolating 2010 exports from
+imports with Denton-Cholette and targets up to 2009, the quarterly RMSE is
+1159 without padding, 888 with `"linear"`, 986 with `"ratio"` and 2627 with
+`"ratio_linear"`. Compare the options with `backtest` before adopting one.
 
 Why artificial targets are needed: for Chow-Lin (stationary AR(1)),
 Litterman/Fernández with an intercept, and Denton-Cholette, adding
@@ -218,6 +232,31 @@ regressors are filtered by `H⁻¹`, the vector `ρ^t` (the *truncation remainde
 coefficient `y₀`) is appended when `ρ ≠ 0`, and `Σ = H⁻¹ H⁻ᵀ`. The method is
 marked experimental, as in R, until full parity is established.
 
+### 2.6b ADL(1,1) (Proietti, 2006) — experimental
+
+    y_t = ρ y_{t−1} + x_t' β₀ + x_{t−1}' β₁ + e_t,   e_t white noise.
+
+The same recursion applies with regressors `[X, L X]`, where `L X` lags every
+non-constant column (`x₀` is backcast as `x₁`; constants are not lagged
+because their lag is collinear). Under `β₁ = −ρ β₀` (the common-factor
+restriction) the model reduces to Chow-Lin: `(1 − ρL)(y_t − x_t'β₀) = e_t`.
+`common_factor_test` computes the Wald statistic of the `q` restrictions
+`g(β) = β₁ + ρ̂ β₀ = 0` with Jacobian `[ρ̂ I, I]`, conditional on `ρ̂`, and
+reports `W/q ~ F(q, n_l − k)`. Monte Carlo (Chow-Lin data, 5 % level):
+rejection rates 6 %, 9 % and 5.5 % with 20, 40 and 80 low-frequency
+observations; the test conditions on `ρ̂`, so it is slightly liberal in small
+samples. Rejecting the restriction says the dynamics of the indicator do not
+transmit one to one to the target; it is not by itself a reason to prefer the
+ADL estimate, whose volatility can be higher (see conformity below).
+
+**Intercept and identification of ρ.** Quilis (2018) observes that removing
+the intercept sharpens the likelihood in `ρ`: with an intercept the constant
+and a persistent AR(1) compete to explain the level. In the swisspharma data
+the maxlog profile of Chow-Lin is flat and truncated at 0 with an intercept,
+and has a clear maximum at `ρ̂ = 0.862` without it. `plot_rho_profile`
+displays the profile; drop the intercept only when the indicator already
+carries the level of the target.
+
 ### 2.7 Prediction variance
 
 The BLUP error covariance (Goldberger, 1962), conditional on `ρ`:
@@ -312,6 +351,30 @@ the held-out period and compares it with the actual target (rolling origin,
 one step ahead). It measures extrapolation of the aggregate, not the shape
 within periods, which is unobservable without a high-frequency benchmark.
 
+## 4d. Conformity and revisions (Quilis, 2018)
+
+**Conformity.** `conformity(result)` compares the estimate `ŷ` with each
+indicator `x`: correlation of levels, correlation of changes, standard
+deviation of the changes of both, and the volatility ratio `sd(Δŷ)/sd(Δx)`.
+Changes are growth rates in % when both series are strictly positive and first
+differences otherwise. Good disaggregations track the short-term movement of
+the indicator (high correlation of changes) without adding volatility it does
+not have (ratio close to the one implied by the regression).
+
+**Revisions.** `revision_analysis` emulates real-time production: it fits each
+candidate with the targets up to `T − n_vintages + v` for `v = 0, …,
+n_vintages` and compares consecutive vintages on their common periods.
+Revisions are measured in levels (% of the previous vintage) and in changes
+(percentage points of growth, or differences); `summary()` reports mean
+absolute revisions over all common periods and over the latest benchmark
+period. Periods outside the observed targets (retropolation) are excluded by
+default because their revisions are driven by the edge of the sample, not by
+the new information. With `extrapolation=True` each vintage also includes the
+indicator of the next period, so the revision of the first (extrapolated)
+estimate is measured. On swisspharma, Denton revises least, Chow-Lin,
+Fernández and Litterman are intermediate and the dynamic models revise most,
+as in Quilis' Table 5.
+
 ## 5. Splicing
 
 Legacy series `o_t`, current series `c_t`, overlap `O`:
@@ -329,6 +392,7 @@ correct. Observed values of the current series are never modified.
 
 ## References
 
+* Bloem, A. M., Dippelsman, R. J. and Mæhle, N. Ø. (2001). *Quarterly National Accounts Manual: Concepts, Data Sources, and Compilation*. IMF.
 * Boot, J. C. G., Feibes, W. and Lisman, J. H. C. (1967). Further methods of derivation of quarterly figures from annual data. *Applied Statistics* 16(1), 65–75.
 * Chow, G. C. and Lin, A. (1971). Best linear unbiased interpolation, distribution, and extrapolation of time series by related series. *Review of Economics and Statistics* 53(4), 372–375.
 * Dagum, E. B. and Cholette, P. A. (2006). *Benchmarking, Temporal Distribution, and Reconciliation Methods for Time Series*. Springer.
@@ -338,6 +402,8 @@ correct. Observed values of the current series are never modified.
 * Fernández, R. B. (1981). A methodological note on the estimation of time series. *Review of Economics and Statistics* 63(3), 471–476.
 * Goldberger, A. S. (1962). Best linear unbiased prediction in the generalized linear regression model. *JASA* 57(298), 369–375.
 * Litterman, R. B. (1983). A random walk, Markov model for the distribution of time series. *JBES* 1(2), 169–173.
+* Proietti, T. (2006). Temporal disaggregation by state space methods: dynamic regression methods revisited. *Econometrics Journal* 9, 357–372.
+* Quilis, E. M. (2018). Temporal disaggregation of economic time series: the view from the trenches. *Statistica Neerlandica* 72(4), 447–470.
 * Quilis, E. M. (2009). Temporal disaggregation using Matlab (technical note).
 * Santos Silva, J. M. C. and Cardoso, F. N. (2001). The Chow-Lin method using dynamic models. *Economic Modelling* 18, 269–280.
 * Sax, C. and Steiner, P. (2013). Temporal disaggregation of time series. *The R Journal* 5(2), 80–88.

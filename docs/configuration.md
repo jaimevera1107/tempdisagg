@@ -21,15 +21,15 @@ raises `IneffectiveParameterWarning`.
 
 ## Regression-based methods
 
-| Setting | `ChowLin` | `Litterman` | `Fernandez` | `DynamicChowLin` | `OLS` | R |
-|---|---|---|---|---|---|---|
-| `include_intercept` | True | True | True | True | True | `y ~ x` / `y ~ 0 + x` |
-| `rho_method` | `"maxlog"` | `"maxlog"` | — (ρ = 0) | `"maxlog"` | — | method suffix |
-| `fixed_rho` | 0.5 | 0.5 | — | 0.5 | — | `fixed.rho` |
-| `truncated_rho` | 0.0 | 0.0 | — | 0.0 | — | `truncated.rho` |
-| `covariance_form` | `"correlation"` | — | — | — | — | `minrss-ecotrim` / `-quilis` |
-| `include_truncation_remainder` | — | — | — | True | — | — |
-| `optimizer` | `RhoOptimizerSettings()` | same | — | same | — | — |
+| Setting | `ChowLin` | `Litterman` | `Fernandez` | `DynamicChowLin` | `Proietti` | `OLS` | R |
+|---|---|---|---|---|---|---|---|
+| `include_intercept` | True | True | True | True | True | True | `y ~ x` / `y ~ 0 + x` |
+| `rho_method` | `"maxlog"` | `"maxlog"` | — (ρ = 0) | `"maxlog"` | `"maxlog"` | — | method suffix |
+| `fixed_rho` | 0.5 | 0.5 | — | 0.5 | 0.5 | — | `fixed.rho` |
+| `truncated_rho` | 0.0 | 0.0 | — | 0.0 | 0.0 | — | `truncated.rho` |
+| `covariance_form` | `"correlation"` | — | — | — | — | — | `minrss-ecotrim` / `-quilis` |
+| `include_truncation_remainder` | — | — | — | True | True | — | — |
+| `optimizer` | `RhoOptimizerSettings()` | same | — | same | same | — | — |
 
 `RhoOptimizerSettings(bounds=(-0.999, 0.999), grid_size=199, tolerance=1e-8)`
 controls the numerical search of `ρ`.
@@ -59,6 +59,7 @@ intercept setting (asking for one is an error that says so).
 | `litterman-maxlog` / `-minrss` / `-fixed` | `Litterman(rho_method=...)` |
 | `fernandez` | `Fernandez()` |
 | `dynamic-maxlog` / `-minrss` / `-fixed` | `DynamicChowLin(rho_method=...)` |
+| `proietti-maxlog` / `-minrss` / `-fixed` | `Proietti(rho_method=...)` (not in R) |
 | `ols` | `OLS()` |
 | `denton-cholette` | `Denton(variant="cholette")` |
 | `denton` | `Denton(variant="original")` |
@@ -111,7 +112,7 @@ TemporalDisaggregator("chow-lin-maxlog",
 |---|---|---|
 | `before`, `after` | 0, 0 | low-frequency periods added around the observed targets |
 | `indicator_method` | `"linear"` | extension of indicators into padded periods |
-| `target_method` | `"linear"` | `"linear"`, `"repeat"` (0.2.x behaviour) or `"none"` |
+| `target_method` | `"linear"` | `"linear"`, `"repeat"` (0.2.x behaviour), `"ratio"` / `"ratio_linear"` (projected benchmark-to-indicator ratio; one indicator) or `"none"` |
 | `fit_window` | 3 | low-frequency periods used for the linear extensions |
 
 Padded and completed periods are removed from `result.values`
