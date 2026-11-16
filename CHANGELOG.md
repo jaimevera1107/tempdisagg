@@ -5,6 +5,8 @@ against R. Every major change increases the minor version by 0.1.
 
 ## Unreleased
 
+## 0.6.5 — 2026-11-16
+
 ### Added
 - `Proietti` method (`proietti-maxlog`, `-minrss`, `-fixed`): the ADL(1,1)
   model of Proietti (2006), `y_t = ρ y_{t-1} + x_t'β₀ + x_{t-1}'β₁ + e_t`,
