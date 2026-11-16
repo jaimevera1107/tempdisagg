@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 import pandas as pd
@@ -114,6 +114,8 @@ class GridBuilder:
         grid, real = self._grid(low_labels, real_index, rows, padded)
         matrix, completed = self._fill(grid, indicators, "indicators")
         weight_values = self._weights(grid, weights)
+        if self.padding.active and TargetPaddingMethod(self.padding.target_method).uses_indicator:
+            rows = self._ratio_targets(rows, low_labels, grid, real, matrix, weight_values)
 
         constraint_matrix, values, kinds, labels = self._constraint_system(
             grid, real, rows, constraints, weight_values)
@@ -212,7 +214,7 @@ class GridBuilder:
 
     def _padding_targets(self, low_labels: pd.Index, observed: pd.Series) -> pd.Series:
         """Artificial targets of padded periods (empty without target padding)."""
-        method = self.padding.target_method
+        method = TargetPaddingMethod(self.padding.target_method)
         if not self.padding.active or method is TargetPaddingMethod.NONE:
             return pd.Series(dtype=float)
         positions = np.asarray([low_labels.get_loc(label) for label in observed.index])
@@ -222,7 +224,9 @@ class GridBuilder:
         for label in padded:
             position = low_labels.get_loc(label)
             after = position > positions.max()
-            if method is TargetPaddingMethod.REPEAT:
+            if method.uses_indicator:
+                result[label] = np.nan  # set by _ratio_targets once the grid exists
+            elif method is TargetPaddingMethod.REPEAT:
                 result[label] = known[-1] if after else known[0]
             else:
                 result[label] = float(extend(positions, known, np.array([position]),
@@ -262,6 +266,49 @@ class GridBuilder:
     # ------------------------------------------------------------------
     # Indicators and weights
     # ------------------------------------------------------------------
+    def _ratio_targets(
+        self, rows: list[_TargetRow], low_labels: pd.Index, grid: pd.Index, real: np.ndarray,
+        matrix: np.ndarray, weights: np.ndarray | None,
+    ) -> list[_TargetRow]:
+        """Set padding targets to the aggregated indicator times a projected BI ratio."""
+        if matrix.shape[1] != 1:
+            raise InputValidationError(
+                "Ratio padding targets need exactly one indicator; got "
+                f"{matrix.shape[1]}.")
+        indicator = matrix[:, 0]
+        parents = np.asarray(self.calendar.parents(grid), dtype=object)
+
+        def aggregated(row: _TargetRow) -> float:
+            members = np.flatnonzero(parents == row.label)
+            if row.partial:
+                members = members[real[members]]
+            value = float(self._target_weights(row, grid, members, weights) @ indicator)
+            if value == 0.0 or not np.isfinite(value):
+                raise InputValidationError(
+                    f"The aggregated indicator of period {row.label} is zero; the "
+                    "benchmark-to-indicator ratio is undefined.")
+            return value
+
+        observed = [row for row in rows if row.kind is RowKind.TARGET]
+        positions = np.asarray([low_labels.get_loc(row.label) for row in observed])
+        ratios = np.asarray([row.value / aggregated(row) for row in observed])
+        method = TargetPaddingMethod(self.padding.target_method)
+        linear = method is TargetPaddingMethod.RATIO_LINEAR
+        updated = []
+        for row in rows:
+            if row.kind is not RowKind.PADDING:
+                updated.append(row)
+                continue
+            position = low_labels.get_loc(row.label)
+            after = position > positions.max()
+            if linear:
+                ratio = float(extend(positions, ratios, np.array([position]),
+                                     EdgeMethod.LINEAR, self.padding.fit_window)[0])
+            else:
+                ratio = float(ratios[-1] if after else ratios[0])
+            updated.append(replace(row, value=ratio * aggregated(row)))
+        return updated
+
     def _fill(self, grid: pd.Index, frame: pd.DataFrame, label: str
               ) -> tuple[np.ndarray, np.ndarray]:
         """Reindex columns to the grid and fill missing values."""

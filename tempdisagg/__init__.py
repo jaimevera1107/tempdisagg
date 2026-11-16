@@ -18,7 +18,16 @@ from tempdisagg.core.aggregation import Conversion, temporal_aggregate
 from tempdisagg.core.constraints import LinearConstraint, aggregate_constraints, known_values
 from tempdisagg.core.data import DataAligner, DisaggregationData
 from tempdisagg.estimation.rho import RhoOptimizerSettings
-from tempdisagg.evaluation.backtest import BacktestResult, Candidate, backtest
+from tempdisagg.evaluation import (
+    BacktestResult,
+    Candidate,
+    CommonFactorTest,
+    RevisionResult,
+    backtest,
+    common_factor_test,
+    conformity,
+    revision_analysis,
+)
 from tempdisagg.exceptions import (
     ArtificialDataWarning,
     ExactFitWarning,
@@ -47,6 +56,7 @@ from tempdisagg.methods import (
     DynamicChowLin,
     Fernandez,
     Litterman,
+    Proietti,
     Uniform,
     available_methods,
     make_method,
@@ -68,6 +78,7 @@ __all__ = [
     "BacktestResult",
     "Candidate",
     "ChowLin",
+    "CommonFactorTest",
     "CompletionSettings",
     "CrossSectionalReconciler",
     "CrossSectionalResult",
@@ -92,8 +103,10 @@ __all__ = [
     "NonNegativeReconciler",
     "NumericalError",
     "PaddingSettings",
+    "Proietti",
     "RatioResult",
     "RedundantConstraintWarning",
+    "RevisionResult",
     "Retropolarizer",
     "RhoBoundaryWarning",
     "RhoNotIdentifiedWarning",
@@ -110,11 +123,14 @@ __all__ = [
     "aggregate_constraints",
     "available_methods",
     "backtest",
+    "common_factor_test",
+    "conformity",
     "disaggregate",
     "disaggregate_ratio",
     "impulse",
     "known_values",
     "level_shift",
     "make_method",
+    "revision_analysis",
     "temporal_aggregate",
 ]

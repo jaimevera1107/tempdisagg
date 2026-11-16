@@ -9,7 +9,7 @@ tempdisagg/
 │   └── linalg.py           difference operators, Cholesky helpers (no pseudo-inverses)
 ├── covariance/
 │   ├── factors.py          LowerTriangularFactor: Σ = T T' applied by recursive filters
-│   └── structures.py       white noise, AR(1), random walk + AR(1), dynamic
+│   └── structures.py       white noise, AR(1), random walk + AR(1), dynamic, ADL(1,1)
 ├── estimation/
 │   ├── gls.py              GLS on the low-frequency equation and its statistics
 │   ├── rho.py              grid + Brent search of ρ with diagnostics
@@ -30,7 +30,10 @@ tempdisagg/
 │   ├── non_negative.py     exact non-negative projection (separable and general)
 │   └── cross_section.py    two-step cross-sectional reconciliation (Di Fonzo-Marini)
 ├── evaluation/
-│   └── backtest.py         rolling one-step-ahead backtest
+│   ├── backtest.py         rolling one-step-ahead backtest
+│   ├── revisions.py        real-time revision analysis over vintages
+│   ├── conformity.py       estimate vs indicator: correlations and volatility
+│   └── specification.py    common-factor test (Proietti vs Chow-Lin)
 ├── ratios.py               ratio of totals via numerator and denominator
 ├── indicators.py           level_shift and impulse dummies
 ├── splicing/               level / ratio / affine / interpolated splicing

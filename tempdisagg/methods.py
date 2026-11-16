@@ -30,6 +30,7 @@ ChowLin                AR(1) residuals                                chow-lin-*
 Litterman              random walk + AR(1) residuals                  litterman-*
 Fernandez              random-walk residuals                          fernandez
 DynamicChowLin         y_t = rho y_{t-1} + x_t b + e_t (experimental) dynamic-*
+Proietti               ADL(1,1): adds x_{t-1} b1 (experimental)       proietti-* (not in R)
 OLS                    white-noise residuals                          ols
 Denton                 benchmarking of one indicator                  denton, denton-cholette
 Uniform                even split                                     uniform
@@ -52,6 +53,7 @@ from tempdisagg.benchmarking.denton import (
     UniformDistributor,
 )
 from tempdisagg.covariance.structures import (
+    ADLStructure,
     AR1Covariance,
     CovarianceForm,
     DynamicStructure,
@@ -100,6 +102,8 @@ class _SpecMixin:
 
     family: ClassVar[str] = ""
     experimental: ClassVar[bool] = False
+    #: Why the method is experimental (shown in the warning).
+    experimental_note: ClassVar[str] = ""
 
     def describe(self) -> pd.DataFrame:
         """Return every setting with its value, meaning and R equivalent."""
@@ -278,6 +282,7 @@ class DynamicChowLin(_SpecMixin):
 
     family: ClassVar[str] = "regression"
     experimental: ClassVar[bool] = True
+    experimental_note: ClassVar[str] = "as in the R package"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "rho_method", RhoMethod(self.rho_method))
@@ -295,6 +300,51 @@ class DynamicChowLin(_SpecMixin):
         """Instantiate the GLS estimator."""
         return RegressionDisaggregator(
             DynamicStructure(self.include_truncation_remainder), RhoMethod(self.rho_method),
+            self.fixed_rho, self.truncated_rho, self.include_intercept, self.optimizer,
+        )
+
+
+@dataclass(frozen=True)
+class Proietti(_SpecMixin):
+    """Proietti (2006): ADL(1,1) disaggregation. Experimental; not in the R package.
+
+    ``y_t = rho y_{t-1} + x_t' b0 + x_{t-1}' b1 + e_t``. It nests the dynamic
+    Chow-Lin model (``b1 = 0``) and the static Chow-Lin model (``b1 = -rho b0``);
+    :func:`tempdisagg.common_factor_test` tests the latter restriction.
+    """
+
+    rho_method: RhoMethod | str = field(
+        default=RhoMethod.MAXLOG, metadata=_doc("'maxlog', 'minrss' or 'fixed'", "—"))
+    fixed_rho: float = field(
+        default=0.5, metadata=_doc("rho when rho_method='fixed'", "—"))
+    truncated_rho: float = field(
+        default=0.0, metadata=_doc("lower bound for an estimated rho; -1 disables", "—"))
+    include_intercept: bool = field(
+        default=True, metadata=_doc("add a constant regressor (never lagged)", "—"))
+    include_truncation_remainder: bool = field(
+        default=True, metadata=_doc("add rho^t to capture the unknown initial value", "—"))
+    optimizer: RhoOptimizerSettings = field(default_factory=RhoOptimizerSettings)
+
+    family: ClassVar[str] = "regression"
+    experimental: ClassVar[bool] = True
+    experimental_note: ClassVar[str] = "not in the R package, so not validated against it"
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "rho_method", RhoMethod(self.rho_method))
+        _validate_rho_settings(self.fixed_rho, self.truncated_rho)
+        _validate_bool("include_intercept", self.include_intercept)
+        _validate_bool("include_truncation_remainder", self.include_truncation_remainder)
+        _check_rho_effectiveness(self)
+
+    @property
+    def name(self) -> str:
+        """Preset name (this method has no R equivalent)."""
+        return f"proietti-{RhoMethod(self.rho_method).value}"
+
+    def build(self) -> Disaggregator:
+        """Instantiate the GLS estimator."""
+        return RegressionDisaggregator(
+            ADLStructure(self.include_truncation_remainder), RhoMethod(self.rho_method),
             self.fixed_rho, self.truncated_rho, self.include_intercept, self.optimizer,
         )
 
@@ -401,6 +451,9 @@ PRESETS: dict[str, MethodSpec] = {
     "dynamic-maxlog": _quiet(DynamicChowLin, rho_method="maxlog"),
     "dynamic-minrss": _quiet(DynamicChowLin, rho_method="minrss"),
     "dynamic-fixed": _quiet(DynamicChowLin, rho_method="fixed"),
+    "proietti-maxlog": _quiet(Proietti, rho_method="maxlog"),
+    "proietti-minrss": _quiet(Proietti, rho_method="minrss"),
+    "proietti-fixed": _quiet(Proietti, rho_method="fixed"),
     "ols": OLS(),
     "denton-cholette": Denton(variant="cholette"),
     "denton": Denton(variant="original"),
@@ -480,6 +533,7 @@ def make_method(method: str | MethodSpec, **overrides: Any) -> MethodSpec:
         spec = dataclasses.replace(spec, **overrides)  # type: ignore[type-var]
 
     if getattr(spec, "experimental", False):
-        warnings.warn(f"Method '{spec.name}' is experimental (as in the R package).",
+        note = getattr(spec, "experimental_note", "")
+        warnings.warn(f"Method '{spec.name}' is experimental" + (f" ({note})." if note else "."),
                       ExperimentalMethodWarning, stacklevel=3)
     return spec

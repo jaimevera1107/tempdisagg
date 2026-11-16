@@ -20,13 +20,25 @@ Padding (off by default)
     observed targets, with extended indicators and (unless
     ``target_method="none"``) artificial targets. It is a heuristic against
     end-point distortions: the artificial constraints anchor the ends of the
-    sample. Padded periods are removed from the returned series.
+    sample. Padded periods whose indicator values are not observed are
+    removed from the returned series; padded periods with observed indicator
+    values (e.g. the current year, before its annual figure is published) are
+    returned, so ``after=1`` also serves to extrapolate them.
 
     Padding with ``target_method="none"`` (unconstrained padded periods) has
     no effect on Chow-Lin, Litterman, Fernandez or Denton-Cholette estimates
     inside the sample: those estimators do not depend on unconstrained
     periods outside it (this is verified by the tests). Only the original
     Denton, whose initial condition moves, reacts to it.
+
+    Benchmark-to-indicator ratio targets (``"ratio"``, ``"ratio_linear"``)
+    The artificial target is the aggregated indicator of the padded period
+    times a projected benchmark-to-indicator (BI) ratio: the edge ratio, or a
+    linear trend of the last ``fit_window`` ratios. This is the IMF's
+    recommendation for extrapolating with Denton (Bloem, Dippelsman and
+    Maehle, 2001, ch. 6): without it the proportional Denton method carries
+    forward the BI ratio of the last sub-period, which can create a step at
+    the start of the new year. It requires exactly one indicator.
 """
 
 from __future__ import annotations
@@ -65,9 +77,16 @@ class PartialPeriodPolicy(str, Enum):
 class TargetPaddingMethod(str, Enum):
     """Artificial low-frequency targets for padded periods."""
 
-    LINEAR = "linear"  # OLS trend of the last ``fit_window`` targets
-    REPEAT = "repeat"  # repeat the edge target (behaviour of 0.2.x)
-    NONE = "none"      # no target: padded periods stay unconstrained
+    LINEAR = "linear"              # OLS trend of the last ``fit_window`` targets
+    REPEAT = "repeat"              # repeat the edge target (behaviour of 0.2.x)
+    NONE = "none"                  # no target: padded periods stay unconstrained
+    RATIO = "ratio"                # edge benchmark-to-indicator ratio x indicator
+    RATIO_LINEAR = "ratio_linear"  # trend of the last ``fit_window`` ratios x indicator
+
+    @property
+    def uses_indicator(self) -> bool:
+        """Whether the artificial target is derived from the indicator."""
+        return self in (TargetPaddingMethod.RATIO, TargetPaddingMethod.RATIO_LINEAR)
 
 
 def _check_window(fit_window: int) -> None:
@@ -124,8 +143,10 @@ class PaddingSettings:
     indicator_method : {"linear", "constant"}, default "linear"
         Extension of the indicators into padded periods (where no real
         indicator values exist).
-    target_method : {"linear", "repeat", "none"}, default "linear"
-        Artificial targets of padded periods.
+    target_method : {"linear", "repeat", "none", "ratio", "ratio_linear"}, default "linear"
+        Artificial targets of padded periods: a trend or the edge value of the
+        targets, none, or the indicator times a projected benchmark-to-indicator
+        ratio (edge ratio or linear trend of the ratios).
     fit_window : int, default 3
         Low-frequency periods used to fit the linear extensions.
     """

@@ -101,6 +101,19 @@ and `summary()` (origins, bias, MAE, RMSE, MAPE per candidate, sorted by RMSE).
 
 `RatioResult`: `numerator`, `denominator`, `ratio`, `low_frequency_error`.
 
+`conformity(result)` → `DataFrame`, one row per non-constant indicator:
+`change` (`"growth %"` or `"difference"`), `corr_levels`, `corr_changes`,
+`sd_changes`, `sd_changes_indicator`, `volatility_ratio`.
+
+`RevisionResult`: `revisions` (one row per candidate, vintage and period with
+the level revision in % and the change revision), `extrapolation`, `failures`
+and `summary()` (`n_vintages`, `change_units`, `MAR_level`, `MAR_change`,
+`MAR_level_latest`, `MAR_change_latest`, `max_level`, sorted by `MAR_change`).
+
+`CommonFactorTest`: `restriction` (`β₁ + ρ̂ β₀` per indicator),
+`standard_errors`, `f_statistic`, `p_value`, `df_numerator`,
+`df_denominator`, `rho` and `summary()`.
+
 ## Warnings
 
 | Warning | When | What to do |
@@ -112,7 +125,7 @@ and `summary()` (origins, bias, MAE, RMSE, MAPE per candidate, sorted by RMSE).
 | `IllConditionedWarning` | near-collinear regressors or near-singular `V`/KKT | Drop or combine indicators |
 | `IndicatorSignWarning` | proportional Denton with a sign-changing indicator | Use `criterion="additive"` |
 | `IneffectiveParameterWarning` | a setting ignored by the configuration | Remove it |
-| `ExperimentalMethodWarning` | dynamic methods | — |
+| `ExperimentalMethodWarning` | dynamic and Proietti methods; the message says why | Compare with `backtest` and `revision_analysis` |
 | `ArtificialDataWarning` | completion or padding created values; regression statistics include padding targets | Review `result.preprocessing` |
 | `RedundantConstraintWarning` | a consistent constraint implied by others was dropped | — |
 | `MissingTargetWarning` | interior low-frequency periods without target | They are estimated, not constrained |

@@ -153,6 +153,7 @@ wide; that is the honest width, not a bug.
 | Denton / Denton–Cholette | none (movement preservation) | one indicator, no regression wanted | `denton`, `denton-cholette` |
 | Uniform | none | no indicator at all | `uniform` |
 | Dynamic Chow–Lin | lagged dependent variable | experimental | `dynamic-maxlog` |
+| Proietti ADL(1,1) | lagged dependent variable and lagged indicators; nests Chow–Lin | experimental; test Chow–Lin with `common_factor_test` | `proietti-maxlog` |
 
 Every preset is a dataclass whose fields are its settings, so the question
 "does this method have an intercept, and can I change it?" is answered by
@@ -279,6 +280,17 @@ fernandez          5  10.511914  70.616875  78.823176  7.080570
 
 `report.predictions`, `report.errors` and `report.failures` hold the detail;
 a candidate that cannot be fitted at some origin is reported, not dropped.
+
+Other tools answer the remaining questions a producer of estimates asks
+(Quilis, 2018):
+
+| Question | Tool |
+|---|---|
+| Does the estimate move like its indicator? | `td.conformity(result)` |
+| How much does the series change when a new benchmark arrives? | `td.revision_analysis(sales, candidates, n_vintages=8).summary()` |
+| Is ρ well identified? | `tempdisagg.plotting.plot_rho_profile(result)` |
+| Is the Chow–Lin restriction acceptable? | `td.common_factor_test(proietti_result)` |
+| How should the target be extended beyond the last benchmark? | `padding=PaddingSettings(after=1, target_method="ratio")` |
 
 ## Validation against R
 

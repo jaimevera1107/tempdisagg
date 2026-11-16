@@ -177,3 +177,75 @@ class DynamicStructure:
             return filtered
         remainder = np.power(float(rho), np.arange(1, n + 1)).reshape(-1, 1)
         return np.hstack([filtered, remainder])
+
+
+class ADLStructure:
+    """ADL(1,1) model of Proietti (2006). Experimental.
+
+    The high-frequency model is the autoregressive distributed lag
+
+        y_t = rho y_{t-1} + x_t' b0 + x_{t-1}' b1 + e_t,   e_t white noise,
+
+    which contains the dynamic Chow-Lin model (``b1 = 0``) and, through the
+    common-factor restriction ``b1 = -rho b0``, the static Chow-Lin model.
+    Written as ``H y = Z g + e`` with ``H = I - rho L`` and
+    ``Z = [X, L X]`` (the constant is not lagged: its lag is collinear with
+    it), the solution ``y = H^{-1} Z g + H^{-1} e`` is a GLS regression on
+    filtered regressors with residual covariance ``H^{-1} H^{-T}``, exactly as
+    in :class:`DynamicStructure`.
+
+    Initial conditions. ``y_0`` enters through the truncation remainder
+    ``rho^t`` (as in the dynamic model and in R). The lag ``x_0`` of the
+    first period is not observed; it is backcast as ``x_1`` (zero first
+    difference). Quilis (2018) backcasts it with an AR model instead; the
+    difference only affects the first period, ``b1 (x_0 - x_1)``, and decays
+    as ``rho^t``.
+
+    Parameters
+    ----------
+    include_truncation_remainder : bool, default True
+    """
+
+    uses_rho: bool = True
+    transforms_regressors: bool = True
+
+    #: Suffix appended to the name of a lagged indicator.
+    LAG_SUFFIX: str = "(-1)"
+
+    def __init__(self, include_truncation_remainder: bool = True) -> None:
+        self.include_truncation_remainder: bool = include_truncation_remainder
+
+    def factor(self, rho: float, n: int) -> LowerTriangularFactor:
+        """Return ``(I - rho L)^{-1}``."""
+        _check_rho(rho, "The ADL model")
+        return LowerTriangularFactor(n, (rho,))
+
+    @staticmethod
+    def lagged_columns(regressors: np.ndarray) -> np.ndarray:
+        """Positions of the columns that are lagged (every non-constant one)."""
+        return np.flatnonzero(np.ptp(regressors, axis=0) > 0.0)
+
+    def transform_regressors(self, regressors: np.ndarray, rho: float) -> np.ndarray:
+        """Append lagged indicators, filter by ``H^{-1}``, add the remainder."""
+        columns = self.lagged_columns(regressors)
+        lagged = np.empty((regressors.shape[0], columns.size))
+        if columns.size:
+            lagged[1:] = regressors[:-1, columns]
+            lagged[0] = regressors[0, columns]  # backcast x_0 = x_1
+        stacked = np.hstack([regressors, lagged])
+        n = stacked.shape[0]
+        filtered = lfilter([1.0], [1.0, -rho], stacked, axis=0) if rho != 0.0 else stacked
+        if rho == 0.0 or not self.include_truncation_remainder:
+            return filtered
+        remainder = np.power(float(rho), np.arange(1, n + 1)).reshape(-1, 1)
+        return np.hstack([filtered, remainder])
+
+    def transformed_names(
+        self, names: tuple[str, ...], regressors: np.ndarray, rho: float, n_columns: int
+    ) -> tuple[str, ...]:
+        """Names of the columns returned by :meth:`transform_regressors`."""
+        lagged = tuple(f"{names[j]}{self.LAG_SUFFIX}" for j in self.lagged_columns(regressors))
+        result = (*names, *lagged)
+        if n_columns > len(result):
+            result = (*result, "(truncation remainder)")
+        return result
