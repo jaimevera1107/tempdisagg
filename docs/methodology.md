@@ -242,9 +242,10 @@ because their lag is collinear). Under `β₁ = −ρ β₀` (the common-factor
 restriction) the model reduces to Chow-Lin: `(1 − ρL)(y_t − x_t'β₀) = e_t`.
 `common_factor_test` computes the Wald statistic of the `q` restrictions
 `g(β) = β₁ + ρ̂ β₀ = 0` with Jacobian `[ρ̂ I, I]`, conditional on `ρ̂`, and
-reports `W/q ~ F(q, n_l − k)`. Monte Carlo (Chow-Lin data, 5 % level):
-rejection rates 6 %, 9 % and 5.5 % with 20, 40 and 80 low-frequency
-observations; the test conditions on `ρ̂`, so it is slightly liberal in small
+reports `W/q ~ F(q, n_l − k)`. Monte Carlo (Chow-Lin data, 5 % level, 500
+replications, `examples/reproduce_paper.py`): rejection rates 7.0 %, 6.6 % and
+5.6 % with 20, 40 and 80 low-frequency observations, and 100 % against ADL
+data; the test conditions on `ρ̂`, so it is slightly liberal in small
 samples. Rejecting the restriction says the dynamics of the indicator do not
 transmit one to one to the target; it is not by itself a reason to prefer the
 ADL estimate, whose volatility can be higher (see conformity below).

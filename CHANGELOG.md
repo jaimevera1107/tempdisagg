@@ -5,6 +5,26 @@ against R. Every major change increases the minor version by 0.1.
 
 ## Unreleased
 
+### Fixed
+- `scripts/release.ps1` waited for CI with a command that needs an interactive
+  choice and returned at once, so the release stopped while the tests were
+  still running. It now polls the `tests` run of the release commit until it
+  completes (`-CiTimeoutMinutes`, default 45).
+- `scripts/release.ps1 -DryRun` left the version and the CHANGELOG modified,
+  which blocked the real run. The dry run restores them, and a run resumed
+  after a failure accepts the bump it had already made.
+- README: the Swiss example has twelve retropolated and two extrapolated
+  quarters, not eight extrapolated ones.
+
+### Added
+- `examples/reproduce_paper.py` regenerates every table, figure and number of
+  the paper describing the package (agreement with R, recovery of known
+  quarterly series, Monte Carlo coverage, common-factor test, timings).
+
+### Changed
+- `docs/methodology.md`: size and power of the common-factor test from the
+  500-replication experiment of the paper.
+
 ## 0.6.5 — 2026-11-16
 
 ### Added

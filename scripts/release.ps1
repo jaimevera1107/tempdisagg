@@ -25,7 +25,9 @@ param(
     # Stop before any commit, push or tag: useful to see what would happen.
     [switch]$DryRun,
     # Skip the local test run when CI has already verified this commit.
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    # Give up waiting for the CI run of the release commit after this long.
+    [int]$CiTimeoutMinutes = 45
 )
 
 # Native commands write progress to stderr; exit codes are checked instead.
@@ -50,9 +52,14 @@ try {
     Step 'Checking the working tree and the branch'
     $branch = (git rev-parse --abbrev-ref HEAD).Trim()
     if ($branch -ne 'main') { throw "Releases are cut from main; you are on '$branch'." }
+    # The two files this script edits may already be modified: that is what an
+    # interrupted earlier run leaves behind, and the steps below are idempotent.
+    $releaseFiles = @('CHANGELOG.md', 'tempdisagg/_version.py')
     $dirty = @(git status --porcelain)
-    if ($dirty.Count -gt 0 -and -not $DryRun) {
-        throw "Uncommitted changes:`n$($dirty -join "`n")`nCommit or stash them first."
+    $foreign = @($dirty | Where-Object { $releaseFiles -notcontains $_.Substring(3).Trim() })
+    $pending = @($dirty | Where-Object { $releaseFiles -contains $_.Substring(3).Trim() })
+    if ($foreign.Count -gt 0 -and -not $DryRun) {
+        throw "Uncommitted changes:`n$($foreign -join "`n")`nCommit or stash them first."
     }
     git fetch origin main --tags
     if ($LASTEXITCODE -ne 0) { throw 'Could not reach the remote.' }
@@ -74,8 +81,14 @@ try {
     Run 'Release checklist' { python tools/check_release.py }
 
     if ($DryRun) {
-        Write-Host "`nDry run: everything passed. Nothing was committed." -ForegroundColor Green
-        Write-Host 'Re-run without -DryRun to publish.' -ForegroundColor Green
+        # Leave the tree as it was found, unless the release files had
+        # changes of their own before the dry run started.
+        if ($pending.Count -eq 0) {
+            git checkout -- $releaseFiles
+            if ($LASTEXITCODE -ne 0) { throw 'Could not restore the version and CHANGELOG.' }
+        }
+        Write-Host "`nDry run: everything passed. Nothing was committed and the" -ForegroundColor Green
+        Write-Host 'version and CHANGELOG were restored. Re-run without -DryRun to publish.' -ForegroundColor Green
         exit 0
     }
 
@@ -91,15 +104,27 @@ try {
 
     $head = (git rev-parse HEAD).Trim()
     Step "Waiting for CI on $($head.Substring(0, 7)) (several minutes)"
-    # The run takes a moment to appear after the push.
-    Start-Sleep -Seconds 12
-    gh run watch --repo "$Owner/$Repo" --exit-status 2>$null | Out-Null
-    $runs = gh run list --repo "$Owner/$Repo" --workflow tests.yml --branch main `
-        --limit 20 --json headSha,conclusion | ConvertFrom-Json
-    if ($LASTEXITCODE -ne 0) { throw 'Could not read the CI runs.' }
-    $ok = @($runs | Where-Object { $_.headSha -eq $head -and $_.conclusion -eq 'success' })
-    if ($ok.Count -eq 0) {
-        throw "CI has not succeeded for $head. Inspect it with: gh run view --log-failed"
+    # Poll the 'tests' run of this exact commit until it completes. The run
+    # takes a moment to appear after the push, so a missing run is not an error.
+    $deadline = (Get-Date).AddMinutes($CiTimeoutMinutes)
+    $conclusion = $null
+    while ($null -eq $conclusion) {
+        $runs = gh run list --repo "$Owner/$Repo" --workflow tests.yml --branch main `
+            --limit 20 --json headSha,status,conclusion | ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0) { throw 'Could not read the CI runs.' }
+        $mine = @($runs | Where-Object { $_ -and $_.headSha -eq $head })
+        if ($mine.Count -gt 0 -and $mine[0].status -eq 'completed') {
+            $conclusion = $mine[0].conclusion
+        } elseif ((Get-Date) -gt $deadline) {
+            throw "CI did not finish for $head within $CiTimeoutMinutes minutes. Run the same command again later."
+        } else {
+            $state = if ($mine.Count -gt 0) { $mine[0].status } else { 'not started yet' }
+            Write-Host "  CI: $state ..."
+            Start-Sleep -Seconds 20
+        }
+    }
+    if ($conclusion -ne 'success') {
+        throw "CI finished with '$conclusion' for $head. Inspect it with: gh run view --log-failed --repo $Owner/$Repo"
     }
     Write-Host 'CI is green.' -ForegroundColor Green
 
