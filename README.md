@@ -103,9 +103,10 @@ Max. aggregation error: 3.411e-13
 ```
 
 The quarterly values sum to the annual sales in every year (that is the
-"aggregation error" line). The indicators run two years beyond the last
-annual observation, so the last eight quarters are extrapolated and marked
-as unconstrained in `result.to_frame()`.
+"aggregation error" line). The indicators start three years before the first
+annual observation and end two quarters after the last one, so twelve quarters
+are retropolated and two are extrapolated; both groups are marked as
+unconstrained in `result.to_frame()`.
 
 When all you need is the series:
 

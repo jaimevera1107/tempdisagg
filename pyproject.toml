@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ dynamic = ["version"]
 description = "Temporal disaggregation of time series: Chow-Lin, Fernandez, Litterman, Denton and more"
 readme = "README.md"
 authors = [{ name = "Jaime Vera-Jaramillo", email = "jaimevera1107@gmail.com" }]
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["temporal disaggregation", "benchmarking", "chow-lin", "denton", "time series", "econometrics"]
 classifiers = [
     "Development Status :: 4 - Beta",

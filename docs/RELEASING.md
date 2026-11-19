@@ -35,8 +35,11 @@ GitHub Release that triggers `publish.yml`.
 
 It stops at the first failure and does nothing further; every step is
 skipped when already done, so after fixing a problem you run the same
-command again and it resumes. `-DryRun` runs every check and stops before
-committing; `-SkipTests` skips the local suite.
+command again and it resumes (a version bump and CHANGELOG section left by an
+interrupted run are accepted). `-DryRun` runs every check, restores the
+version and the CHANGELOG, and stops before committing; `-SkipTests` skips
+the local suite. The script waits for the `tests` run of the release commit,
+polling every 20 seconds for up to `-CiTimeoutMinutes` (default 45).
 
 `publish.yml` then verifies tag and version, requires the commit to be on
 `main`, runs the Python matrix and the R parity tests, builds the
