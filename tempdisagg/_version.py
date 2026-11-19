@@ -4,4 +4,4 @@
 re-exports it; change it only with ``python tools/bump_version.py X.Y.Z``.
 """
 
-__version__ = "0.6.5"
+__version__ = "0.6.6"

@@ -5,6 +5,8 @@ against R. Every major change increases the minor version by 0.1.
 
 ## Unreleased
 
+## 0.6.6 — 2026-11-18
+
 ### Fixed
 - `scripts/release.ps1` waited for CI with a command that needs an interactive
   choice and returned at once, so the release stopped while the tests were
