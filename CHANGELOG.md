@@ -13,6 +13,9 @@ against R. Every major change increases the minor version by 0.1.
 - `scripts/release.ps1 -DryRun` left the version and the CHANGELOG modified,
   which blocked the real run. The dry run restores them, and a run resumed
   after a failure accepts the bump it had already made.
+- `pyproject.toml` declares the license as the SPDX expression `MIT` with
+  `license-files`, replacing the table form that setuptools stops supporting
+  in February 2027 (build requirement raised to setuptools 77).
 - README: the Swiss example has twelve retropolated and two extrapolated
   quarters, not eight extrapolated ones.
 
